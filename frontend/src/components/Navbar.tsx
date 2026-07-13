@@ -11,6 +11,7 @@
 import { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import '../styles/Navbar.css';
 import '../styles/auth.css';
 
@@ -22,6 +23,7 @@ const NAV_LINKS = [
 
 const Navbar: React.FC = () => {
   const { isAuthenticated, currentUser, logout } = useAuth();
+  const { count } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -64,7 +66,7 @@ const Navbar: React.FC = () => {
                 }
                 onClick={closeMenu}
               >
-                {label}
+                {label} {label === 'Cart' && count > 0 && `(${count})`}
               </NavLink>
             </li>
           ))}

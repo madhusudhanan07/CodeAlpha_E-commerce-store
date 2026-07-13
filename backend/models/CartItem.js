@@ -36,9 +36,11 @@ export const findByUserId = async (userId) => {
        p.slug        AS product_slug,
        p.image_url   AS product_image,
        p.price       AS product_price,
-       p.stock       AS product_stock
+       p.stock       AS product_stock,
+       c.name        AS product_category
      FROM cart_items ci
      INNER JOIN products p ON p.id = ci.product_id
+     LEFT JOIN categories c ON p.category_id = c.id
      WHERE ci.user_id = ?
      ORDER BY ci.created_at DESC`,
     [userId],

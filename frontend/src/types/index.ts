@@ -64,16 +64,27 @@ export interface ProductQueryParams {
   category?: string;
 }
 
-// ── Cart (placeholder) ────────────────────────────────────────────────────────
+// ── Cart ──────────────────────────────────────────────────────────────────────
 
 export interface CartItem {
-  product: Product;
+  id: number;
+  user_id: number;
+  product_id: number;
   quantity: number;
+  created_at: string;
+  product_name: string;
+  product_slug: string;
+  product_image: string | null;
+  product_price: number | string;
+  product_stock: number;
+  product_category: string | null;
+  subtotal: number;
 }
 
 export interface CartState {
-  items: CartItem[];
-  total: number;
+  cart: CartItem[];
+  count: number;
+  total_price: number;
 }
 
 // ── Order (placeholder) ───────────────────────────────────────────────────────

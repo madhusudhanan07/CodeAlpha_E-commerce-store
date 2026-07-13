@@ -13,6 +13,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/global.css';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import AppRouter from './routes/AppRouter';
 
 const rootElement = document.getElementById('root');
@@ -24,7 +25,9 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <AuthProvider>
-      <AppRouter />
+      <CartProvider>
+        <AppRouter />
+      </CartProvider>
     </AuthProvider>
   </StrictMode>,
 );

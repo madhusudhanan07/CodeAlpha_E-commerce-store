@@ -21,6 +21,8 @@ import indexRoute    from './routes/indexRoute.js';
 import authRoutes    from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 
+import cartRoutes    from './routes/cartRoutes.js';
+
 // ─── App Initialization ───────────────────────────────────────────────────────
 const app = express();
 
@@ -46,8 +48,10 @@ app.use('/api/auth',     authRoutes);
 // Products catalogue (public read)
 app.use('/api/products', productRoutes);
 
+// Cart
+app.use('/api/cart',     cartRoutes);
+
 // ── Future routes will be mounted here ──
-// app.use('/api/v1/cart',   cartRoutes);
 // app.use('/api/v1/orders', orderRoutes);
 
 // ─── Error Handling ───────────────────────────────────────────────────────────

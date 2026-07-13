@@ -137,7 +137,7 @@ const HomePage: React.FC = () => {
                       />
                       <div className="hero__showcase-info">
                         <p className="hero__showcase-name">{p.name}</p>
-                        <p className="hero__showcase-price">${p.price.toFixed(2)}</p>
+                        <p className="hero__showcase-price">${Number(p.price).toFixed(2)}</p>
                       </div>
                     </div>
                   ))}
