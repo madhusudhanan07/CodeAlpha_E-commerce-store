@@ -1,0 +1,38 @@
+{
+  "name": "codealpha-ecommerce-backend",
+  "version": "1.0.0",
+  "description": "CodeAlpha E-Commerce Store — Express/Node.js Backend",
+  "main": "backend/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/madhusudhanan07/CodeAlpha_E-commerce-store.git"
+  },
+  "keywords": [
+    "ecommerce",
+    "nodejs",
+    "express",
+    "mysql"
+  ],
+  "author": "Madhusudhanan",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/madhusudhanan07/CodeAlpha_E-commerce-store/issues"
+  },
+  "homepage": "https://github.com/madhusudhanan07/CodeAlpha_E-commerce-store#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "firebase-admin": "^14.1.0",
+    "mysql2": "^3.22.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

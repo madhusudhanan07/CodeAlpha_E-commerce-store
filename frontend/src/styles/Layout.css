@@ -1,0 +1,14 @@
+/* ============================================================
+   Layout.css — MainLayout wrapper styles
+   ============================================================ */
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.layout__content {
+  flex: 1;
+  padding-top: var(--navbar-height); /* offset fixed navbar */
+}
