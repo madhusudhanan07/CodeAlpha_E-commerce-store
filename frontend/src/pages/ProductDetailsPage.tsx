@@ -190,7 +190,7 @@ const ProductDetailsPage: React.FC = () => {
               <div className="product-details__price-row">
                 <span className="product-details__price-currency">$</span>
                 <span className="product-details__price">
-                  {product.price.toFixed(2)}
+                  {Number(product.price).toFixed(2)}
                 </span>
               </div>
 
