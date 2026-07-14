@@ -87,15 +87,74 @@ export interface CartState {
   total_price: number;
 }
 
-// ── Order (placeholder) ───────────────────────────────────────────────────────
+// ── Order ─────────────────────────────────────────────────────────────────────
 
-export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+export type OrderStatus = 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+export type PaymentStatus = 'Pending' | 'Paid' | 'Failed';
+export type PaymentMethod = 'Cash on Delivery' | 'UPI' | 'Credit/Debit Card';
 
+/** Shipping address captured at checkout */
+export interface ShippingAddress {
+  full_name: string;
+  mobile: string;
+  address: string;
+  city: string;
+  state: string;
+  zip_code: string;
+}
+
+/** Order row from GET /api/orders */
 export interface Order {
-  id: string;
-  userId: string;
-  items: CartItem[];
-  total: number;
-  status: OrderStatus;
-  createdAt: string;
+  id: number;
+  user_id: number;
+  total_amount: number;
+  order_status: OrderStatus;
+  payment_status: PaymentStatus;
+  payment_method: PaymentMethod;
+  shipping_address: ShippingAddress | null;
+  created_at: string;
+}
+
+/** Order line item from GET /api/orders/:id */
+export interface OrderItem {
+  id: number;
+  order_id: number;
+  product_id: number;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+  product_name: string;
+  product_slug: string;
+  product_image: string | null;
+}
+
+/** Payload for POST /api/orders */
+export interface PlaceOrderPayload {
+  shipping_address: ShippingAddress;
+  payment_method: PaymentMethod;
+}
+
+/** Response shape from POST /api/orders */
+export interface OrderConfirmation {
+  id: number;
+  total_amount: number;
+  subtotal: number;
+  delivery_charge: number;
+  payment_method: PaymentMethod;
+  order_status: OrderStatus;
+  shipping_address: ShippingAddress;
+  item_count: number;
+  created_at: string;
+}
+
+/** Response shape from GET /api/orders */
+export interface OrderListResponse {
+  orders: Order[];
+  count: number;
+}
+
+/** Response shape from GET /api/orders/:id */
+export interface OrderDetailResponse {
+  order: Order;
+  items: OrderItem[];
 }

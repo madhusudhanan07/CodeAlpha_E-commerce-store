@@ -18,23 +18,30 @@
  *   └── *                → NotFoundPage
  */
 
+import { lazy } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import MainLayout         from '../layouts/MainLayout';
-import HomePage           from '../pages/HomePage';
-import ProductDetailsPage from '../pages/ProductDetailsPage';
-import ProductsPage      from '../pages/ProductsPage';
-import CartPage           from '../pages/CartPage';
-import CheckoutPage       from '../pages/CheckoutPage';
-import LoginPage          from '../pages/LoginPage';
-import RegisterPage       from '../pages/RegisterPage';
-import ProfilePage        from '../pages/ProfilePage';
-import NotFoundPage       from '../pages/NotFoundPage';
 import ProtectedRoute     from '../components/ProtectedRoute';
+import ErrorPage          from '../pages/ErrorPage';
+
+// Lazy loaded views
+const HomePage           = lazy(() => import('../pages/HomePage'));
+const ProductDetailsPage = lazy(() => import('../pages/ProductDetailsPage'));
+const ProductsPage       = lazy(() => import('../pages/ProductsPage'));
+const CartPage           = lazy(() => import('../pages/CartPage'));
+const CheckoutPage       = lazy(() => import('../pages/CheckoutPage'));
+const OrderSuccessPage   = lazy(() => import('../pages/OrderSuccessPage'));
+const OrdersPage         = lazy(() => import('../pages/OrdersPage'));
+const LoginPage          = lazy(() => import('../pages/LoginPage'));
+const RegisterPage       = lazy(() => import('../pages/RegisterPage'));
+const ProfilePage        = lazy(() => import('../pages/ProfilePage'));
+const NotFoundPage       = lazy(() => import('../pages/NotFoundPage'));
 
 const router = createBrowserRouter([
   {
     path: '/',
     element: <MainLayout />,
+    errorElement: <ErrorPage />,
     children: [
       { index: true,             element: <HomePage /> },
       { path: 'products',        element: <ProductsPage /> },
@@ -49,9 +56,11 @@ const router = createBrowserRouter([
       {
         element: <ProtectedRoute />,
         children: [
-          { path: 'cart',     element: <CartPage /> },
-          { path: 'checkout', element: <CheckoutPage /> },
-          { path: 'profile',  element: <ProfilePage /> },
+          { path: 'cart',          element: <CartPage /> },
+          { path: 'checkout',      element: <CheckoutPage /> },
+          { path: 'order-success', element: <OrderSuccessPage /> },
+          { path: 'orders',        element: <OrdersPage /> },
+          { path: 'profile',       element: <ProfilePage /> },
         ],
       },
     ],

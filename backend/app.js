@@ -22,6 +22,7 @@ import authRoutes    from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 
 import cartRoutes    from './routes/cartRoutes.js';
+import orderRoutes   from './routes/orderRoutes.js';
 
 // ─── App Initialization ───────────────────────────────────────────────────────
 const app = express();
@@ -51,8 +52,8 @@ app.use('/api/products', productRoutes);
 // Cart
 app.use('/api/cart',     cartRoutes);
 
-// ── Future routes will be mounted here ──
-// app.use('/api/v1/orders', orderRoutes);
+// Orders (checkout + history)
+app.use('/api/orders',   orderRoutes);
 
 // ─── Error Handling ───────────────────────────────────────────────────────────
 

@@ -8,12 +8,39 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 import '../styles/pages.css';
 
 const CartPage: React.FC = () => {
   const { cart, count, total_price, loading, error, updateQuantity, removeFromCart, clearCart } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  const handleUpdate = async (id: number, qty: number) => {
+    try {
+      await updateQuantity(id, qty);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update quantity');
+    }
+  };
+
+  const handleRemove = async (id: number) => {
+    try {
+      await removeFromCart(id);
+      toast.success('Item removed from cart');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove item');
+    }
+  };
+
+  const handleClear = async () => {
+    try {
+      await clearCart();
+      toast.success('Cart cleared');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to clear cart');
+    }
+  };
 
   if (!isAuthenticated) {
     return (
@@ -103,7 +130,7 @@ const CartPage: React.FC = () => {
                   <button
                     type="button"
                     title="Decrease quantity"
-                    onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
+                    onClick={() => handleUpdate(item.product_id, item.quantity - 1)}
                     disabled={item.quantity <= 1}
                   >
                     −
@@ -112,7 +139,7 @@ const CartPage: React.FC = () => {
                   <button
                     type="button"
                     title="Increase quantity"
-                    onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+                    onClick={() => handleUpdate(item.product_id, item.quantity + 1)}
                     disabled={item.quantity >= item.product_stock}
                   >
                     +
@@ -121,7 +148,7 @@ const CartPage: React.FC = () => {
                 <button
                   type="button"
                   className="cart-item__remove"
-                  onClick={() => removeFromCart(item.product_id)}
+                  onClick={() => handleRemove(item.product_id)}
                 >
                   Remove
                 </button>
@@ -134,7 +161,7 @@ const CartPage: React.FC = () => {
           ))}
 
           <div style={{ marginTop: '1rem' }}>
-             <button className="cart__clear-btn" onClick={clearCart}>
+             <button className="cart__clear-btn" onClick={handleClear}>
                Clear Cart
              </button>
           </div>

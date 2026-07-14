@@ -31,7 +31,7 @@ export const PAYMENT_STATUS = Object.freeze(['Pending', 'Paid', 'Failed']);
 export const findByUserId = async (userId) => {
   const [rows] = await pool.query(
     `SELECT id, user_id, total_amount, order_status, payment_status,
-            shipping_address, created_at
+            payment_method, shipping_address, created_at
      FROM orders
      WHERE user_id = ?
      ORDER BY created_at DESC`,
@@ -48,7 +48,7 @@ export const findByUserId = async (userId) => {
 export const findById = async (id) => {
   const [rows] = await pool.query(
     `SELECT id, user_id, total_amount, order_status, payment_status,
-            shipping_address, created_at
+            payment_method, shipping_address, created_at
      FROM orders WHERE id = ? LIMIT 1`,
     [id],
   );
@@ -65,7 +65,7 @@ export const findById = async (id) => {
 export const findByIdAndUser = async (id, userId) => {
   const [rows] = await pool.query(
     `SELECT id, user_id, total_amount, order_status, payment_status,
-            shipping_address, created_at
+            payment_method, shipping_address, created_at
      FROM orders WHERE id = ? AND user_id = ? LIMIT 1`,
     [id, userId],
   );
@@ -81,6 +81,7 @@ export const findByIdAndUser = async (id, userId) => {
  *   total_amount:     number,
  *   order_status?:    string,
  *   payment_status?:  string,
+ *   payment_method?:  string,
  *   shipping_address?: object
  * }} data
  * @returns {Promise<Object>} mysql2 OkPacket (insertId = new order ID)
@@ -90,13 +91,14 @@ export const create = async ({
   total_amount,
   order_status     = 'Pending',
   payment_status   = 'Pending',
+  payment_method   = 'Cash on Delivery',
   shipping_address = null,
 }) => {
   const addressJson = shipping_address ? JSON.stringify(shipping_address) : null;
   const [result] = await pool.query(
-    `INSERT INTO orders (user_id, total_amount, order_status, payment_status, shipping_address)
-     VALUES (?, ?, ?, ?, ?)`,
-    [user_id, total_amount, order_status, payment_status, addressJson],
+    `INSERT INTO orders (user_id, total_amount, order_status, payment_status, payment_method, shipping_address)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [user_id, total_amount, order_status, payment_status, payment_method, addressJson],
   );
   return result;
 };

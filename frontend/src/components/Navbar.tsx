@@ -73,17 +73,30 @@ const Navbar: React.FC = () => {
 
           {/* Mobile-only auth links (visible when menu open on small screen) */}
           {isAuthenticated && (
-            <li className="navbar__mobile-auth">
-              <NavLink
-                to="/profile"
-                className={({ isActive }) =>
-                  `navbar__link${isActive ? ' active' : ''}`
-                }
-                onClick={closeMenu}
-              >
-                Profile
-              </NavLink>
-            </li>
+            <>
+              <li className="navbar__mobile-auth">
+                <NavLink
+                  to="/orders"
+                  className={({ isActive }) =>
+                    `navbar__link${isActive ? ' active' : ''}`
+                  }
+                  onClick={closeMenu}
+                >
+                  My Orders
+                </NavLink>
+              </li>
+              <li className="navbar__mobile-auth">
+                <NavLink
+                  to="/profile"
+                  className={({ isActive }) =>
+                    `navbar__link${isActive ? ' active' : ''}`
+                  }
+                  onClick={closeMenu}
+                >
+                  Profile
+                </NavLink>
+              </li>
+            </>
           )}
         </ul>
 

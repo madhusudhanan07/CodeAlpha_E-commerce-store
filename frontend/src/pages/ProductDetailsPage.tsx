@@ -16,6 +16,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { fetchProductById } from '../services/productService';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import toast from 'react-hot-toast';
 import type { Product } from '../types';
 import '../styles/products.css';
 
@@ -77,9 +78,6 @@ const ProductDetailsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [addedFeedback, setAddedFeedback] = useState(false);
-
-  const [cartError, setCartError] = useState<string | null>(null);
 
   useEffect(() => {
     const numId = Number(id);
@@ -91,9 +89,7 @@ const ProductDetailsPage: React.FC = () => {
 
     setLoading(true);
     setError(null);
-    setCartError(null);
     setQuantity(1);
-    setAddedFeedback(false);
 
     fetchProductById(numId)
       .then(setProduct)
@@ -107,16 +103,15 @@ const ProductDetailsPage: React.FC = () => {
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
+      toast.error('Please sign in to add items to your cart.');
       navigate('/login');
       return;
     }
-    setCartError(null);
     try {
       await addToCartContext(product!.id, quantity);
-      setAddedFeedback(true);
-      setTimeout(() => setAddedFeedback(false), 2000);
+      toast.success(`${quantity} ${quantity > 1 ? 'items' : 'item'} added to cart!`);
     } catch (err: any) {
-      setCartError(err.message || 'Failed to add to cart.');
+      toast.error(err.message || 'Failed to add to cart.');
     }
   };
 
@@ -272,8 +267,6 @@ const ProductDetailsPage: React.FC = () => {
                   >
                     {isOutOfStock ? (
                       'Out of Stock'
-                    ) : addedFeedback ? (
-                      <>✓ Added</>
                     ) : (
                       <>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -300,12 +293,6 @@ const ProductDetailsPage: React.FC = () => {
                     Buy Now
                   </button>
                 </div>
-                
-                {cartError && (
-                  <p style={{ color: 'var(--color-danger)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-                    {cartError}
-                  </p>
-                )}
 
                 {/* Back link */}
                 <Link to="/products" className="product-details__back-btn">
