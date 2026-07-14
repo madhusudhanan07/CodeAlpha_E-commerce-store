@@ -112,6 +112,17 @@ ul, ol {
   list-style: none;
 }
 
+/* ── Accessibility ───────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+button:focus-visible, a:focus-visible, input:focus-visible {
+  outline-color: var(--color-primary);
+}
+
 /* ── Utility Classes ─────────────────────────────────────── */
 .container {
   width: 100%;
