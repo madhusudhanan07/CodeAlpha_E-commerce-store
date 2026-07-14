@@ -9,11 +9,14 @@
  */
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { fetchProducts } from '../services/productService';
 import ProductGrid from '../components/products/ProductGrid';
 import SearchBar from '../components/products/SearchBar';
 import ProductFilters from '../components/products/ProductFilters';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 import type { Product } from '../types';
 import '../styles/products.css';
 
@@ -29,6 +32,9 @@ function useDebounce<T>(value: T, delay: number): T {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const ProductsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { addToCart } = useCart();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -97,6 +103,20 @@ const ProductsPage: React.FC = () => {
     if (value) setActiveCategory('');
   }, []);
 
+  const handleAddToCart = useCallback(async (product: Product) => {
+    if (!isAuthenticated) {
+      toast.error('Please sign in to add items to your cart.');
+      navigate('/login');
+      return;
+    }
+    try {
+      await addToCart(product.id, 1);
+      toast.success(`"${product.name}" added to cart!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add to cart.');
+    }
+  }, [isAuthenticated, navigate, addToCart]);
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <main className="products-page container" aria-label="Product catalogue">
@@ -150,6 +170,7 @@ const ProductsPage: React.FC = () => {
           skeletonCount={8}
           emptyTitle="No products found"
           emptyDesc="Try clearing your filters or searching with a different term."
+          onAddToCart={handleAddToCart}
         />
       )}
     </main>

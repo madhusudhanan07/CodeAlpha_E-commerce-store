@@ -3,11 +3,21 @@
    Imported once in main.tsx — applies to the entire app.
    ============================================================ */
 
+@import "tailwindcss";
+
 /* ── Google Font ─────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* ── CSS Custom Properties (Design Tokens) ───────────────── */
 :root {
+  /* Shadcn standard vars linked to existing tokens */
+  --background: 240 14% 7%; /* similar to #0f0f14 */
+  --foreground: 240 20% 92%; /* similar to #e8e8f0 */
+  --primary: 244 100% 69%; /* similar to #6c63ff */
+  --primary-foreground: 0 0% 100%;
+  --muted: 240 14% 17%;
+  --muted-foreground: 240 13% 60%;
+
   /* Colors */
   --color-primary:        #6c63ff;
   --color-primary-dark:   #4f46e5;
@@ -22,6 +32,7 @@
   --color-success:        #22c55e;
   --color-danger:         #ef4444;
   --color-warning:        #f59e0b;
+}
 
   /* Typography */
   --font-sans:  'Inter', system-ui, -apple-system, sans-serif;

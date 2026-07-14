@@ -78,6 +78,7 @@ const ProductDetailsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [buyingNow, setBuyingNow] = useState(false);
 
   useEffect(() => {
     const numId = Number(id);
@@ -115,6 +116,22 @@ const ProductDetailsPage: React.FC = () => {
     }
   };
 
+  const handleBuyNow = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please sign in to continue.');
+      navigate('/login');
+      return;
+    }
+    setBuyingNow(true);
+    try {
+      await addToCartContext(product!.id, quantity);
+      navigate('/checkout');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to process. Please try again.');
+      setBuyingNow(false);
+    }
+  };
+
   // ── Error / Not Found ──────────────────────────────────────────────────────
   if (!loading && (error || !product)) {
     return (
@@ -136,9 +153,8 @@ const ProductDetailsPage: React.FC = () => {
     );
   }
 
-  const imageSrc =
-    product?.image_url ??
-    'https://placehold.co/600x600/1a1a24/6c63ff?text=No+Image';
+  const DETAIL_FALLBACK = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=800&fit=crop&q=85';
+  const imageSrc = product?.image_url || DETAIL_FALLBACK;
   const isOutOfStock = (product?.stock ?? 0) === 0;
 
   return (
@@ -171,13 +187,14 @@ const ProductDetailsPage: React.FC = () => {
             {/* ── Left: Image Panel ──────────────────────────────── */}
             <div className="product-details__img-panel">
               <div className="product-details__img-wrap">
-                {imageSrc ? (
-                  <img src={imageSrc} alt={product.name} />
-                ) : (
-                  <div className="product-details__img-placeholder" aria-hidden="true">
-                    🛒
-                  </div>
-                )}
+                <img
+                  src={imageSrc}
+                  alt={product.name}
+                  onError={(e) => {
+                    const t = e.currentTarget;
+                    if (t.src !== DETAIL_FALLBACK) t.src = DETAIL_FALLBACK;
+                  }}
+                />
               </div>
             </div>
 
@@ -285,12 +302,12 @@ const ProductDetailsPage: React.FC = () => {
                   <button
                     id={`buy-now-detail-${product.id}`}
                     className="product-details__buy-btn"
-                    onClick={() => {}}
-                    disabled={isOutOfStock}
+                    onClick={handleBuyNow}
+                    disabled={isOutOfStock || buyingNow}
                     type="button"
                     aria-label={isOutOfStock ? 'Out of stock' : `Buy ${product.name} now`}
                   >
-                    Buy Now
+                    {buyingNow ? 'Processing…' : 'Buy Now'}
                   </button>
                 </div>
 

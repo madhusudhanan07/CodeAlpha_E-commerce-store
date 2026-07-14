@@ -102,6 +102,7 @@ const Navbar: React.FC = () => {
 
         {/* ── Actions ───────────────────────────────── */}
         <div className="navbar__actions">
+          
           {isAuthenticated ? (
             <>
               {/* Avatar + display name */}

@@ -18,6 +18,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { fetchOrders, fetchOrderById } from '../services/orderService';
 import type { Order, OrderItem, OrderStatus } from '../types';
+import { OrderTracking } from '../components/ui/order-tracking';
 import '../styles/checkout.css';
 
 // ── Status badge class mapping ───────────────────────────────────────────────
@@ -109,6 +110,33 @@ const OrdersPage: React.FC = () => {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  // ── Generate Tracking Steps ───────────────────────────────────────────────
+  const generateTrackingSteps = (status: OrderStatus, createdAtStr: string) => {
+    const defaultSteps = [
+      { name: "Order Placed", key: 'Pending' },
+      { name: "Processing", key: 'Processing' },
+      { name: "Confirmed", key: 'Confirmed' },
+      { name: "Shipped", key: 'Shipped' },
+      { name: "Delivered", key: 'Delivered' }
+    ];
+
+    if (status === 'Cancelled') {
+      return [
+        { name: "Order Placed", timestamp: formatDate(createdAtStr), isCompleted: true },
+        { name: "Cancelled", timestamp: "Status updated recently", isCompleted: true }
+      ];
+    }
+    
+    let currentIndex = defaultSteps.findIndex(s => s.key === status);
+    if (currentIndex === -1) currentIndex = 0; // fallback
+
+    return defaultSteps.map((step, idx) => ({
+      name: step.name,
+      timestamp: idx === 0 ? formatDate(createdAtStr) : (idx <= currentIndex ? "Completed" : "Pending"),
+      isCompleted: idx <= currentIndex
+    }));
   };
 
   // ── Guards ────────────────────────────────────────────────────────────────
@@ -266,7 +294,7 @@ const OrdersPage: React.FC = () => {
                   {selectedItems.map((item) => (
                     <div key={item.id} className="order-detail-item">
                       <img
-                        src={item.product_image || 'https://placehold.co/56x56/1a1a24/6c63ff?text=No+Img'}
+                        src={item.product_image || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=100&h=100&fit=crop&q=80'}
                         alt={item.product_name}
                         className="order-detail-item__image"
                       />
@@ -281,6 +309,16 @@ const OrdersPage: React.FC = () => {
                       </span>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Order Tracking */}
+              <div className="order-detail__section">
+                <h3 className="order-detail__section-title">Order Tracking</h3>
+                <div style={{ padding: '1rem 0' }}>
+                  <OrderTracking 
+                    steps={generateTrackingSteps(selectedOrder.order_status, selectedOrder.created_at)} 
+                  />
                 </div>
               </div>
 

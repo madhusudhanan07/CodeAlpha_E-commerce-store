@@ -3,9 +3,10 @@
  *
  * Shows: image, category badge, name, price, stock status.
  * Clicking the card or the "View" button navigates to /products/:id.
- * "Add to Cart" button is wired to onClick prop (cart module — future phase).
+ * "Add to Cart" button is wired to CartContext.
  */
 
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Product } from '../../types';
 
@@ -14,11 +15,11 @@ interface ProductCardProps {
   onAddToCart?: (product: Product) => void;
 }
 
-const PLACEHOLDER =
-  'https://placehold.co/600x400/1a1a24/6c63ff?text=No+Image';
+const FALLBACK =
+  'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=400&fit=crop&q=80';
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
-  const imageUrl = product.image_url || PLACEHOLDER;
+  const [imgSrc, setImgSrc] = useState(product.image_url || FALLBACK);
   const isOutOfStock = product.stock === 0;
   const isLowStock = product.stock > 0 && product.stock <= 10;
 
@@ -31,7 +32,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         aria-label={`View ${product.name}`}
         tabIndex={-1}
       >
-        <img src={imageUrl} alt={product.name} loading="lazy" />
+        <img
+          src={imgSrc}
+          alt={product.name}
+          loading="lazy"
+          onError={() => setImgSrc(FALLBACK)}
+        />
         {isOutOfStock && (
           <div className="product-card__oos-badge" aria-label="Out of stock">
             Out of Stock
