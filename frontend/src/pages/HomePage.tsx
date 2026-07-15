@@ -90,13 +90,21 @@ const HomePage: React.FC = () => {
               </p>
 
               <div className="hero__cta">
-                <Link to="/products" className="hero__btn--primary">
-                  Shop Now
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                    strokeLinejoin="round" aria-hidden="true">
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                    <polyline points="12 5 19 12 12 19" />
+                <Link to="/products" className="hero-shop-now-btn">
+                  <p>Shop Now</p>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M14 5l7 7m0 0l-7 7m7-7H3"
+                    ></path>
                   </svg>
                 </Link>
                 <Link to="/register" className="hero__btn--ghost">
