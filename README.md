@@ -17,21 +17,20 @@ A full-stack, production-ready e-commerce platform built as a portfolio project 
 
 ## 🛠 Tech Stack
 
-**Frontend:**
-- React 19 (TypeScript)
-- Vite build tool
-- React Router v6.4 (Lazy loaded routing)
-- Context API (State Management)
-- Vanilla CSS + Design Tokens
-- React Hot Toast (Notifications)
+Frontend:
+React + TypeScript + Vite
 
-**Backend:**
-- Node.js & Express.js
-- MySQL 8 (mysql2/promise wrapper for async interactions)
-- Firebase Admin SDK (Authentication validation)
+Backend:
+Express.js (Node.js)
 
-**Database:**
-- MySQL with strongly normalized schema (Users, Products, CartItems, Orders, OrderItems).
+Database:
+MySQL
+
+Authentication:
+Firebase Authentication
+
+Optional Development Tools:
+Python scripts (only for one-time seed generation, not required to run the application)
 
 ## 📂 Folder Structure
 
