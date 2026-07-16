@@ -16,7 +16,7 @@ interface ProductCardProps {
 }
 
 const FALLBACK =
-  'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=400&fit=crop&q=80';
+  'https://placehold.co/600x600/16161e/a78bfa?text=Image+Unavailable';
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   const [imgSrc, setImgSrc] = useState(product.image_url || FALLBACK);
@@ -42,11 +42,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
           <div className="product-card__oos-badge" aria-label="Out of stock">
             Out of Stock
           </div>
-        )}
-        {product.is_featured === 1 && !isOutOfStock && (
-          <span className="product-card__featured-badge" aria-label="Featured product">
-            ★ Featured
-          </span>
         )}
       </Link>
 

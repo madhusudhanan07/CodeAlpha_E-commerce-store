@@ -8,35 +8,60 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { fetchFeatured, fetchProducts } from '../services/productService';
 import ProductGrid from '../components/products/ProductGrid';
 import type { Product } from '../types';
+import { ShoppingCart } from 'lucide-react';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 import '../styles/products.css';
 
-// ── Category metadata ─────────────────────────────────────────────────────────
 const CATEGORIES = [
-  { slug: 'electronics',  name: 'Electronics',    icon: '💻', color: 'rgba(108,99,255,0.10)', border: 'rgba(108,99,255,0.35)' },
-  { slug: 'fashion',      name: 'Fashion',         icon: '👗', color: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.35)' },
-  { slug: 'books',        name: 'Books',           icon: '📚', color: 'rgba(34,197,94,0.10)',  border: 'rgba(34,197,94,0.35)'  },
-  { slug: 'home-kitchen', name: 'Home & Kitchen',  icon: '🏠', color: 'rgba(239,68,68,0.10)',  border: 'rgba(239,68,68,0.35)'  },
-  { slug: 'sports',       name: 'Sports',          icon: '⚡', color: 'rgba(165,180,252,0.10)', border: 'rgba(165,180,252,0.35)' },
+  { slug: 'electronics',          name: 'Electronics',            icon: '💻', color: 'rgba(108,99,255,0.10)', border: 'rgba(108,99,255,0.35)' },
+  { slug: 'fashion',              name: 'Fashion',                 icon: '👗', color: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.35)' },
+  { slug: 'books',                name: 'Books',                   icon: '📚', color: 'rgba(34,197,94,0.10)',  border: 'rgba(34,197,94,0.35)'  },
+  { slug: 'home-kitchen',         name: 'Home & Kitchen',          icon: '🏠', color: 'rgba(239,68,68,0.10)',  border: 'rgba(239,68,68,0.35)'  },
+  { slug: 'sports-fitness',       name: 'Sports & Fitness',        icon: '⚡', color: 'rgba(165,180,252,0.10)', border: 'rgba(165,180,252,0.35)' },
+  { slug: 'beauty-personal-care', name: 'Beauty & Personal Care',  icon: '✨', color: 'rgba(236,72,153,0.10)', border: 'rgba(236,72,153,0.35)' },
+  { slug: 'bags-accessories',     name: 'Bags & Accessories',      icon: '👜', color: 'rgba(14,165,233,0.10)', border: 'rgba(14,165,233,0.35)' },
+  { slug: 'gaming',               name: 'Gaming',                  icon: '🎮', color: 'rgba(74,222,128,0.10)', border: 'rgba(74,222,128,0.35)' },
 ];
 
 // ── Hero showcase — 4 product images loaded from the API ─────────────────────
 const SHOWCASE_SLUGS = [
   'apple-iphone-15-pro',
   'nike-air-max-270',
-  'atomic-habits-james-clear',
-  'instant-pot-duo-7-in-1',
+  'sony-wh-1000xm5',
+  'apple-watch-series-9',
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const HomePage: React.FC = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { addToCart } = useCart();
   const [featured, setFeatured] = useState<Product[]>([]);
   const [showcase, setShowcase] = useState<Product[]>([]);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
   const [loadingShowcase, setLoadingShowcase] = useState(true);
+
+  const handleAddToCart = async (product: Product, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      toast.error('Please sign in to add items to your cart.');
+      navigate('/login');
+      return;
+    }
+    try {
+      await addToCart(product.id, 1);
+      toast.success(`"${product.name}" added to cart!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add to cart.');
+    }
+  };
 
   useEffect(() => {
     // Fetch featured products
@@ -115,11 +140,11 @@ const HomePage: React.FC = () => {
               {/* Stats strip */}
               <div className="hero__stats">
                 <div>
-                  <p className="hero__stat-value">20+</p>
+                  <p className="hero__stat-value">60+</p>
                   <p className="hero__stat-label">Products</p>
                 </div>
                 <div>
-                  <p className="hero__stat-value">5</p>
+                  <p className="hero__stat-value">8</p>
                   <p className="hero__stat-label">Categories</p>
                 </div>
                 <div>
@@ -136,18 +161,31 @@ const HomePage: React.FC = () => {
                     <div key={i} className="hero__showcase-card skeleton" style={{ aspectRatio: '1' }} />
                   ))
                 : showcase.map((p) => (
-                    <div key={p.id} className="hero__showcase-card">
-                      <img
-                        className="hero__showcase-img"
-                        src={p.image_url ?? 'https://placehold.co/300x300/1a1a24/6c63ff?text=Product'}
-                        alt={p.name}
-                        loading="lazy"
-                      />
+                    <Link to={`/products/${p.id}`} key={p.id} className="hero__showcase-card">
+                      <div className="hero__showcase-img-wrap">
+                        <img
+                          className="hero__showcase-img"
+                          src={p.image_url ?? 'https://placehold.co/300x300/1a1a24/6c63ff?text=Product'}
+                          alt={p.name}
+                          loading="lazy"
+                        />
+                      </div>
                       <div className="hero__showcase-info">
                         <p className="hero__showcase-name">{p.name}</p>
                         <p className="hero__showcase-price">${Number(p.price).toFixed(2)}</p>
+                        <div className="hero__showcase-rating">
+                          <span className="hero__showcase-stars">★★★★★</span>
+                          <span className="hero__showcase-review-count">(128)</span>
+                        </div>
+                        <button 
+                          className="hero__showcase-cart-btn" 
+                          onClick={(e) => handleAddToCart(p, e)}
+                          aria-label="Add to Cart"
+                        >
+                          <ShoppingCart className="w-4 h-4" />
+                        </button>
                       </div>
-                    </div>
+                    </Link>
                   ))}
             </div>
           </div>

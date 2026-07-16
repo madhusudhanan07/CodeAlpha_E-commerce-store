@@ -153,7 +153,7 @@ const ProductDetailsPage: React.FC = () => {
     );
   }
 
-  const DETAIL_FALLBACK = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=800&fit=crop&q=85';
+  const DETAIL_FALLBACK = 'https://placehold.co/800x800/16161e/a78bfa?text=Image+Unavailable';
   const imageSrc = product?.image_url || DETAIL_FALLBACK;
   const isOutOfStock = (product?.stock ?? 0) === 0;
 
@@ -204,11 +204,6 @@ const ProductDetailsPage: React.FC = () => {
               {/* Category + Featured badge */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <p className="product-details__category">{product.category_name}</p>
-                {product.is_featured === 1 && (
-                  <span className="product-details__badge-featured">
-                    ★ Featured
-                  </span>
-                )}
               </div>
 
               {/* Name */}

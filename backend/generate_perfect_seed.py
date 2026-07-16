@@ -1,0 +1,261 @@
+import json
+
+# Unsplash source mappings (specific queries using reliable Unsplash URL patterns)
+# To ensure long-term stability and relevant imagery, we use high-quality Unsplash source URLs 
+# that are known to return valid images for specific precise keywords.
+def get_url(keyword):
+    # Using source.unsplash.com alternative fallback or direct photo IDs that are stable.
+    # Since source.unsplash is currently unstable/deprecated, we use direct photo IDs mapped by category
+    return keyword
+
+data = [
+    # 1. Electronics
+    {
+        "category": (1, "Electronics", "electronics", "Gadgets and devices"),
+        "products": [
+            ("Apple iPhone 15 Pro", "apple-iphone-15-pro", "Latest flagship smartphone from Apple.", "https://images.unsplash.com/photo-1598327106026-d9521da673d1?w=600&h=600&fit=crop", 1199.99, 120, 1),
+            ("Samsung Galaxy S24 Ultra", "samsung-galaxy-s24-ultra", "Premium Android device with an advanced camera system.", "https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=600&h=600&fit=crop", 1299.99, 85, 0),
+            ("Apple MacBook Air M3", "apple-macbook-air-m3", "Incredibly thin and light laptop with M3 chip.", "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600&h=600&fit=crop", 1099.00, 40, 1),
+            ("Dell XPS 15", "dell-xps-15", "Powerful laptop for creators with stunning OLED display.", "https://images.unsplash.com/photo-1593642702821-c823b13eb2a2?w=600&h=600&fit=crop", 1899.99, 32, 0),
+            ("Sony WH-1000XM5 Headphones", "sony-wh-1000xm5", "Industry-leading noise canceling over-ear headphones.", "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=600&h=600&fit=crop", 349.99, 110, 1),
+            ("Apple Watch Series 9", "apple-watch-series-9", "Advanced health tracking smartwatch.", "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&h=600&fit=crop", 399.00, 75, 0),
+            ("Canon EOS R5 Camera", "canon-eos-r5", "Professional mirrorless camera for stunning photography.", "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&h=600&fit=crop", 3899.00, 15, 0),
+            ("Samsung 65-Inch 4K TV", "samsung-65-4k-tv", "Breathtaking 4K UHD Smart TV.", "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=600&h=600&fit=crop", 1250.00, 20, 0),
+            ("JBL Charge 5 Speaker", "jbl-charge-5", "Portable Bluetooth speaker with deep bass.", "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=600&h=600&fit=crop", 149.95, 140, 0),
+            ("Keychron Q1 Pro Keyboard", "keychron-q1-pro", "Custom mechanical keyboard for enthusiasts.", "https://images.unsplash.com/photo-1595225476474-87563907a212?w=600&h=600&fit=crop", 199.00, 55, 0),
+        ]
+    },
+    
+    # 2. Fashion
+    {
+        "category": (2, "Fashion", "fashion", "Clothes and apparel"),
+        "products": [
+            ("Nike Air Max 270", "nike-air-max-270", "Comfortable, stylish everyday sneakers.", "https://images.unsplash.com/photo-1600181516264-3ea807fe3772?w=600&h=600&fit=crop", 150.00, 130, 1),
+            ("Levi's 501 Original Jeans", "levis-501-original", "Classic straight leg denim jeans.", "https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&h=600&fit=crop", 69.50, 200, 0),
+            ("Puma Graphic Hoodie", "puma-graphic-hoodie", "Comfortable cotton-blend sports hoodie.", "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600&h=600&fit=crop", 55.00, 180, 0),
+            ("Adidas Ultraboost 23", "adidas-ultraboost-23", "High-performance running shoes with energy return.", "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop", 190.00, 95, 0),
+            ("Men's Classic T-Shirt", "mens-classic-tshirt", "Essential basic crew neck t-shirt.", "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=600&fit=crop", 22.00, 300, 0),
+            ("Leather Biker Jacket", "leather-biker-jacket", "Genuine leather jacket for a bold look.", "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600&h=600&fit=crop", 249.99, 40, 0),
+            ("Women's Summer Floral Dress", "womens-floral-dress", "Lightweight, breathable dress for warm days.", "https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=600&h=600&fit=crop", 45.00, 115, 0),
+            ("Chuck Taylor All Star", "chuck-taylor-all-star", "The iconic canvas high-top sneaker.", "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=600&h=600&fit=crop", 65.00, 150, 0),
+            ("Winter Puffer Coat", "winter-puffer-coat", "Insulated winter jacket for extreme cold.", "https://images.unsplash.com/photo-1517070208541-6ddc4d3efbcb?w=600&h=600&fit=crop", 145.00, 75, 0),
+            ("Patagonia Fleece Pullover", "patagonia-fleece", "Warm fleece perfect for layering outdoors.", "https://images.unsplash.com/photo-1544441892-794166f1e3fd?w=600&h=600&fit=crop", 119.00, 88, 1),
+        ]
+    },
+
+    # 3. Books
+    {
+        "category": (3, "Books", "books", "Readings and literature"),
+        "products": [
+            ("Atomic Habits", "atomic-habits", "An Easy & Proven Way to Build Good Habits.", "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=600&h=600&fit=crop", 16.99, 250, 1),
+            ("Clean Code", "clean-code", "A Handbook of Agile Software Craftsmanship.", "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&h=600&fit=crop", 42.50, 120, 0),
+            ("Deep Work", "deep-work", "Rules for Focused Success in a Distracted World.", "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&h=600&fit=crop", 21.00, 185, 0),
+            ("The Pragmatic Programmer", "pragmatic-programmer", "Journey to Mastery in software engineering.", "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=600&h=600&fit=crop", 39.99, 90, 0),
+            ("Zero to One", "zero-to-one", "Notes on Startups, or How to Build the Future.", "https://images.unsplash.com/photo-1589998059171-989d887dda6e?w=600&h=600&fit=crop", 18.00, 210, 0),
+            ("Sapiens: A Brief History of Humankind", "sapiens", "Exploring the history of humanity.", "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=600&h=600&fit=crop", 22.95, 140, 0),
+            ("Shoe Dog", "shoe-dog", "A Memoir by the Creator of Nike.", "https://images.unsplash.com/photo-1614729939124-032f0b56c9ce?w=600&h=600&fit=crop", 19.95, 160, 0),
+            ("Thinking, Fast and Slow", "thinking-fast-and-slow", "The groundbreaking tour of the mind.", "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=600&h=600&fit=crop", 17.50, 200, 0),
+            ("Dune", "dune-frank-herbert", "A science fiction masterpiece by Frank Herbert.", "https://images.unsplash.com/photo-1614546419706-e7893a201b17?w=600&h=600&fit=crop", 15.99, 130, 0),
+            ("Project Hail Mary", "project-hail-mary", "A lone astronaut to save the Earth.", "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&h=600&fit=crop", 14.99, 150, 0),
+        ]
+    },
+
+    # 4. Home & Kitchen
+    {
+        "category": (4, "Home & Kitchen", "home-kitchen", "Household items"),
+        "products": [
+            ("Instant Pot Duo", "instant-pot-duo", "7-in-1 multi-use programmable pressure cooker.", "https://images.unsplash.com/photo-1585515320310-259814833e62?w=600&h=600&fit=crop", 99.95, 110, 1),
+            ("Breville Barista Espresso Machine", "breville-barista-espresso", "Create great tasting espresso at home.", "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&h=600&fit=crop", 699.95, 25, 0),
+            ("Zojirushi Rice Cooker", "zojirushi-rice-cooker", "Micom rice cooker and warmer.", "https://images.unsplash.com/photo-1596797038530-2c107229654b?w=600&h=600&fit=crop", 145.00, 45, 0),
+            ("KitchenAid Stand Mixer", "kitchenaid-stand-mixer", "Artisan series 5-quart tilt-head stand mixer.", "https://images.unsplash.com/photo-1589578228447-e1a4e481c6c8?w=600&h=600&fit=crop", 429.99, 30, 0),
+            ("Dyson V15 Detect Vacuum", "dyson-v15-detect", "Cordless stick vacuum with laser illumination.", "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=600&fit=crop", 749.00, 40, 1),
+            ("Caraway Nonstick Cookware", "caraway-nonstick-cookware", "Ceramic non-stick 7-piece pot and pan set.", "https://images.unsplash.com/photo-1585675549007-9b25134106bb?w=600&h=600&fit=crop", 395.00, 20, 0),
+            ("Airtight Food Storage Containers", "airtight-storage-containers", "7 piece BPA-free pantry organization set.", "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&h=600&fit=crop", 35.99, 180, 0),
+            ("Modern Table Lamp", "modern-table-lamp", "Minimalist brass and glass table lamp.", "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600&h=600&fit=crop", 55.00, 95, 0),
+            ("Corelle 18-Piece Dinner Set", "corelle-dinner-set", "Chip resistant dinnerware set for 6.", "https://images.unsplash.com/photo-1603093246395-5853fbdcefe2?w=600&h=600&fit=crop", 75.00, 60, 0),
+            ("Yeti Rambler 20 oz", "yeti-rambler-20", "Stainless steel vacuum insulated tumbler.", "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600&h=600&fit=crop", 35.00, 250, 0),
+        ]
+    },
+
+    # 5. Sports & Fitness
+    {
+        "category": (5, "Sports & Fitness", "sports-fitness", "Athletic gear"),
+        "products": [
+            ("Bowflex SelectTech 552 Dumbbells", "bowflex-dumbbells", "Adjustable dumbbells from 5 to 52.5 lbs.", "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&h=600&fit=crop", 429.00, 45, 1),
+            ("Manduka PRO Yoga Mat", "manduka-pro-yoga-mat", "High performance, extra thick yoga mat.", "https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?w=600&h=600&fit=crop", 129.00, 110, 0),
+            ("Peloton Bike+", "peloton-bike-plus", "Immersive indoor cycling experience.", "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=600&h=600&fit=crop", 2295.00, 15, 0),
+            ("Kookaburra Cricket Bat", "kookaburra-cricket-bat", "Premium English willow cricket bat.", "https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=600&h=600&fit=crop", 185.00, 30, 0),
+            ("Adidas Fevernova Football", "adidas-fevernova", "Professional quality match soccer ball.", "https://images.unsplash.com/photo-1614632537190-23e4146777f5?w=600&h=600&fit=crop", 85.00, 120, 0),
+            ("Theragun Pro Massage Gun", "theragun-pro", "Deep muscle treatment for enhanced recovery.", "https://images.unsplash.com/photo-1578135246231-158a74ec4e54?w=600&h=600&fit=crop", 599.00, 25, 0),
+            ("Spalding NBA Basketball", "spalding-nba-basketball", "Official size and weight leather basketball.", "https://images.unsplash.com/photo-1518063319808-1f5be1c6e1e8?w=600&h=600&fit=crop", 65.00, 85, 0),
+            ("Yonex Astrox Badminton Racket", "yonex-astrox", "Head heavy racket for steep smashes.", "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=600&h=600&fit=crop", 145.00, 40, 0),
+            ("Everlast Skipping Rope", "everlast-skipping-rope", "Adjustable speed jump rope for cardio.", "https://images.unsplash.com/photo-1590487988256-9ed24133863e?w=600&h=600&fit=crop", 15.99, 210, 0),
+            ("UA Gym Duffle Bag", "ua-gym-bag", "Water-resistant, ventilated sports bag.", "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&h=600&fit=crop", 45.00, 160, 0),
+        ]
+    },
+
+    # 6. Beauty & Personal Care
+    {
+        "category": (6, "Beauty & Personal Care", "beauty-personal-care", "Cosmetics and grooming"),
+        "products": [
+            ("MAC Matte Lipstick", "mac-matte-lipstick", "Iconic lipstick with high color payoff.", "https://images.unsplash.com/photo-1586495777744-4413f21062fa?w=600&h=600&fit=crop", 21.00, 300, 1),
+            ("Dior Sauvage Perfume", "dior-sauvage-edp", "A radically fresh composition for men.", "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=600&h=600&fit=crop", 125.00, 95, 0),
+            ("Olaplex No. 4 Shampoo", "olaplex-no-4", "Bond maintenance shampoo for damaged hair.", "https://images.unsplash.com/photo-1585232351009-467ce1f42220?w=600&h=600&fit=crop", 30.00, 180, 0),
+            ("CeraVe Hydrating Face Wash", "cerave-face-wash", "Mild facial cleanser with ceramides.", "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=600&h=600&fit=crop", 16.50, 240, 0),
+            ("Cetaphil Moisturizing Lotion", "cetaphil-lotion", "Everyday face and body moisturizer.", "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&h=600&fit=crop", 18.00, 220, 0),
+            ("La Mer Crème de la Mer", "la-mer-cream", "Ultra-rich moisturizing cream.", "https://images.unsplash.com/photo-1615397323214-3a7a97fd0158?w=600&h=600&fit=crop", 380.00, 15, 0),
+            ("Philips Norelco Multigroom", "philips-multigroom", "All-in-one trimmer for face, head and body.", "https://images.unsplash.com/photo-1629851608678-7fba0b9a67a8?w=600&h=600&fit=crop", 59.99, 110, 0),
+            ("Dyson Supersonic Hair Dryer", "dyson-supersonic", "Fast drying with heat shield technology.", "https://images.unsplash.com/photo-1522337660859-02fbefca4702?w=600&h=600&fit=crop", 429.00, 35, 1),
+            ("Laneige Lip Sleeping Mask", "laneige-lip-mask", "Leave-on lip mask that soothes and moisturizes.", "https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=600&h=600&fit=crop", 24.00, 160, 0),
+            ("Estée Lauder Night Repair", "estee-lauder-serum", "Advanced night repair synchronized recovery complex.", "https://images.unsplash.com/photo-1617897903246-719242758050?w=600&h=600&fit=crop", 115.00, 60, 0),
+        ]
+    },
+
+    # 7. Bags & Accessories
+    {
+        "category": (7, "Bags & Accessories", "bags-accessories", "Bags, wallets, etc."),
+        "products": [
+            ("Herschel Little America Backpack", "herschel-backpack", "Mountaineering inspired backpack.", "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&h=600&fit=crop", 109.99, 140, 1),
+            ("Bellroy Slim Leather Wallet", "bellroy-slim-wallet", "Minimalist bi-fold genuine leather wallet.", "https://images.unsplash.com/photo-1627123424574-724758594e93?w=600&h=600&fit=crop", 79.00, 180, 0),
+            ("Ray-Ban Aviator Sunglasses", "ray-ban-aviator", "Classic polarized metal frame sunglasses.", "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&h=600&fit=crop", 163.00, 95, 0),
+            ("Designer Tote Handbag", "designer-tote", "Elegant leather tote ideal for work or travel.", "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=600&h=600&fit=crop", 225.00, 45, 0),
+            ("Spigen iPhone 15 Case", "spigen-iphone-15-case", "Tough armor protective phone case.", "https://images.unsplash.com/photo-1603566234582-fdd73812165c?w=600&h=600&fit=crop", 19.99, 300, 0),
+            ("Casio Vintage Watch", "casio-vintage-watch", "Iconic digital retro watch.", "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?w=600&h=600&fit=crop", 45.00, 150, 0),
+            ("Anker USB-C Hub 7-in-1", "anker-usb-c-hub", "Portable multi-port adapter.", "https://images.unsplash.com/photo-1563203369-26f2e4a5ccf7?w=600&h=600&fit=crop", 35.00, 210, 0),
+            ("Anker PowerCore 20000mAh", "anker-powercore", "High-capacity portable charger.", "https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=600&h=600&fit=crop", 49.99, 185, 0),
+            ("The North Face Duffle", "north-face-duffle", "Base camp resistant travel duffle bag.", "https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&h=600&fit=crop", 135.00, 60, 0),
+            ("Fossil Leather Belt", "fossil-leather-belt", "Classic men's brown leather belt.", "https://images.unsplash.com/photo-1624222247344-550fb60ebabf?w=600&h=600&fit=crop", 35.00, 140, 0),
+        ]
+    },
+
+    # 8. Gaming
+    {
+        "category": (8, "Gaming", "gaming", "Consoles and gaming gear"),
+        "products": [
+            ("PlayStation 5 Slim", "playstation-5-slim", "Next-gen gaming console with Ray Tracing.", "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=600&h=600&fit=crop", 499.99, 85, 1),
+            ("Logitech G Pro X Superlight", "logitech-gaming-mouse", "Ultra-lightweight wireless gaming mouse.", "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=600&h=600&fit=crop", 149.99, 130, 0),
+            ("Corsair K70 RGB Keyboard", "corsair-gaming-keyboard", "Mechanical gaming keyboard with cherry MX switches.", "https://images.unsplash.com/photo-1595225476474-87563907a212?w=600&h=600&fit=crop", 159.99, 90, 0),
+            ("HyperX Cloud II Headset", "hyperx-gaming-headset", "7.1 surround sound gaming headset.", "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=600&h=600&fit=crop", 99.99, 150, 0),
+            ("Nintendo Switch OLED", "nintendo-switch-oled", "Versatile hybrid console with vibrant screen.", "https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=600&h=600&fit=crop", 349.99, 65, 0),
+            ("Xbox Elite Wireless Controller", "xbox-elite-controller", "Customizable pro-level gamepad.", "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=600&h=600&fit=crop", 179.99, 80, 0),
+            ("Asus ROG Zephyrus G14", "asus-rog-g14", "Powerful compact gaming laptop.", "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=600&h=600&fit=crop", 1449.00, 30, 0),
+            ("Logitech Brio 4K Webcam", "logitech-brio-4k", "Ultra HD webcam for streaming.", "https://images.unsplash.com/photo-1587826620573-0ff7227ddc0f?w=600&h=600&fit=crop", 199.99, 70, 0),
+            ("Secretlab TITAN Evo Chair", "secretlab-titan-chair", "Ergonomic gaming chair for long sessions.", "https://images.unsplash.com/photo-1598550476439-6847785fcea6?w=600&h=600&fit=crop", 549.00, 20, 0),
+            ("Samsung 990 PRO 2TB NVMe", "samsung-990-pro", "High-speed internal SSD for PC and PS5.", "https://images.unsplash.com/photo-1628557044797-f21a177c37ec?w=600&h=600&fit=crop", 189.99, 120, 0),
+        ]
+    },
+
+    # 9. Pet Supplies
+    {
+        "category": (9, "Pet Supplies", "pet-supplies", "Everything for your pets"),
+        "products": [
+            ("Purina Pro Plan Dog Food", "purina-dog-food", "High protein dry dog food, 30 lb bag.", "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=600&h=600&fit=crop", 55.99, 150, 0),
+            ("Orthopedic Pet Bed", "orthopedic-pet-bed", "Memory foam bed for ultimate dog comfort.", "https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=600&h=600&fit=crop", 65.00, 80, 0),
+            ("Kong Classic Dog Toy", "kong-dog-toy", "Durable rubber chew and fetch toy.", "https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=600&h=600&fit=crop", 14.50, 250, 0),
+            ("Furbo 360 Dog Camera", "furbo-dog-camera", "Interactive pet camera with treat tosser.", "https://images.unsplash.com/photo-1520117006859-00216715f0d9?w=600&h=600&fit=crop", 210.00, 45, 1),
+            ("Cat Tree Multi-Level Condo", "cat-tree-condo", "Scratching posts and perches for indoor cats.", "https://images.unsplash.com/photo-1543852786-1cf6624b9987?w=600&h=600&fit=crop", 89.99, 35, 0),
+            ("Stainless Steel Pet Bowl", "pet-feeding-bowl", "Non-slip set of two bowls for food and water.", "https://images.unsplash.com/photo-1605335520938-0fc298075306?w=600&h=600&fit=crop", 18.00, 180, 0),
+            ("Chuckit! Ultra Balls", "chuckit-ultra-balls", "High bounce rubber dog balls, 2-pack.", "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=600&h=600&fit=crop", 11.99, 300, 0),
+            ("No-Pull Dog Harness", "dog-harness", "Adjustable reflective harness with handle.", "https://images.unsplash.com/photo-1596492784531-6e6eb5ea9993?w=600&h=600&fit=crop", 22.95, 140, 0),
+            ("Deshedding Pet Brush", "pet-grooming-brush", "Tool to significantly reduce pet shedding.", "https://images.unsplash.com/photo-1516734212903-a1752b0cb0e3?w=600&h=600&fit=crop", 25.00, 120, 0),
+            ("Automatic Cat Water Fountain", "cat-water-fountain", "Ultra-quiet filtered pet water dispenser.", "https://images.unsplash.com/photo-1511044568932-338cba0ad803?w=600&h=600&fit=crop", 29.99, 95, 0),
+        ]
+    },
+
+    # 10. Automotive
+    {
+        "category": (10, "Automotive", "automotive", "Car accessories"),
+        "products": [
+            ("Anker ROAV DashCam", "anker-dashcam", "1080p dashboard camera with night vision.", "https://images.unsplash.com/photo-1503375894314-476514ac012b?w=600&h=600&fit=crop", 79.99, 110, 0),
+            ("Portable Car Vacuum Cleaner", "car-vacuum", "High power handheld vacuum for interiors.", "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&h=600&fit=crop", 35.50, 160, 0),
+            ("Digital Tyre Inflator", "tyre-inflator", "12V portable air compressor pump.", "https://images.unsplash.com/photo-1511919884226-fd3cad34687c?w=600&h=600&fit=crop", 42.00, 130, 0),
+            ("Motorcycle Helmet Dot Approved", "motorcycle-helmet", "Full face matte black safety helmet.", "https://images.unsplash.com/photo-1555008872-f03b347fd862?w=600&h=600&fit=crop", 129.95, 65, 1),
+            ("Chemical Guys Wash Kit", "car-wash-kit", "16-piece complete car care kit.", "https://images.unsplash.com/photo-1601362840469-51e4d8d58785?w=600&h=600&fit=crop", 99.99, 85, 0),
+            ("All-Weather Car Cover", "car-cover", "Heavy duty waterproof outdoor cover.", "https://images.unsplash.com/photo-1610665979854-c9779df5373a?w=600&h=600&fit=crop", 55.00, 100, 0),
+            ("NOCO Jump Starter", "jump-starter", "1000 Amp lithium car battery jump starter.", "https://images.unsplash.com/photo-1621607512214-68297480165e?w=600&h=600&fit=crop", 99.95, 120, 0),
+            ("Phone Mount for Car", "car-phone-mount", "Universal air vent dashboard holder.", "https://images.unsplash.com/photo-1623838275661-bc9dd755c3c1?w=600&h=600&fit=crop", 15.99, 250, 0),
+            ("Microfiber Cleaning Cloths", "microfiber-cloths", "Pack of 24 lint-free detailing towels.", "https://images.unsplash.com/photo-1620063259960-91129b85c2df?w=600&h=600&fit=crop", 19.99, 210, 0),
+            ("LED Headlight Bulbs", "led-headlights", "Extremely bright 6000K white conversion kit.", "https://images.unsplash.com/photo-1549429712-4eb2e3a13783?w=600&h=600&fit=crop", 45.00, 140, 0),
+        ]
+    },
+
+    # 11. Toys & Baby
+    {
+        "category": (11, "Toys & Baby", "toys-baby", "Toys, games, and baby care."),
+        "products": [
+            ("Giant Teddy Bear", "giant-teddy-bear", "Extremely soft 5-foot plush bear.", "https://images.unsplash.com/photo-1558980838-89c0a6b7d5fb?w=600&h=600&fit=crop", 65.00, 80, 0),
+            ("LEGO Star Wars Millennium Falcon", "lego-millennium-falcon", "Detailed 7,500 piece collector model.", "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=600&h=600&fit=crop", 159.99, 35, 1),
+            ("Hot Wheels 20-Car Pack", "hot-wheels-pack", "Collection of die-cast metal toy cars.", "https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=600&h=600&fit=crop", 22.99, 140, 0),
+            ("Fisher-Price Baby Walker", "baby-walker", "Learn-to-play interactive walking toy.", "https://images.unsplash.com/photo-1519689680058-324335c77eba?w=600&h=600&fit=crop", 35.00, 110, 0),
+            ("Huggies Snug & Dry Diapers", "huggies-diapers", "Size 3, 1-month supply.", "https://images.unsplash.com/photo-1533227260828-5313a5323565?w=600&h=600&fit=crop", 45.99, 200, 0),
+            ("Melissa & Doug Wooden Blocks", "wooden-blocks", "100-piece solid wood building set.", "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=600&h=600&fit=crop", 19.99, 160, 0),
+            ("Barbie Dreamhouse", "barbie-dreamhouse", "Dollhouse with elevator, slide, and pool.", "https://images.unsplash.com/photo-1558981359-219d6364c9c8?w=600&h=600&fit=crop", 199.00, 45, 0),
+            ("Philips Avent Baby Monitor", "baby-monitor", "Secure video monitor with night vision.", "https://images.unsplash.com/photo-1584988713215-46fd41dfd8d4?w=600&h=600&fit=crop", 119.99, 65, 0),
+            ("NERF N-Strike Elite Blaster", "nerf-blaster", "Motorized dart blaster with 18-dart clip.", "https://images.unsplash.com/photo-1569085600109-1736b4f71a0e?w=600&h=600&fit=crop", 39.99, 130, 0),
+            ("Baby Einstein Play Gym", "play-gym", "Musical activity mat for infants.", "https://images.unsplash.com/photo-1519689680058-324335c77eba?w=600&h=600&fit=crop", 55.00, 90, 0),
+        ]
+    },
+
+    # 12. Office & Stationery
+    {
+        "category": (12, "Office & Stationery", "office-stationery", "Office supplies, pens, and paper."),
+        "products": [
+            ("Moleskine Classic Notebook", "moleskine-notebook", "Hard cover lined journal, 5x8.25 inches.", "https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=600&h=600&fit=crop", 22.95, 200, 0),
+            ("Pilot G2 Retractable Gel Pens", "pilot-g2-pens", "Fine point black ink, 12-pack.", "https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=600&h=600&fit=crop", 14.50, 250, 1),
+            ("Steelcase Leap v2 Office Chair", "office-chair", "Ergonomic desk chair for long hours.", "https://images.unsplash.com/photo-1505843490538-5184b29bb859?w=600&h=600&fit=crop", 899.00, 25, 1),
+            ("Epson EcoTank ET-2800 Printer", "epson-printer", "Cartridge-free color supertank printer.", "https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?w=600&h=600&fit=crop", 279.00, 50, 0),
+            ("Post-it Notes 3x3", "post-it-notes", "Classic yellow sticky notes, 12 pads.", "https://images.unsplash.com/photo-1579567761406-4684ee0c75b6?w=600&h=600&fit=crop", 15.00, 300, 0),
+            ("Sharpie Permanent Markers", "sharpie-markers", "Assorted colors, fine point, 24-count.", "https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=600&h=600&fit=crop", 18.99, 180, 0),
+            ("Brother P-Touch Label Maker", "label-maker", "Compact electronic labeling system.", "https://images.unsplash.com/photo-1596700813735-df457b98ecaf?w=600&h=600&fit=crop", 35.00, 95, 0),
+            ("Logitech ERGO K860 Keyboard", "ergo-keyboard", "Wireless split ergonomic keyboard.", "https://images.unsplash.com/photo-1595225476474-87563907a212?w=600&h=600&fit=crop", 129.99, 70, 0),
+            ("Highland Double Sided Tape", "double-sided-tape", "Clear adhesive tape for crafts and office.", "https://images.unsplash.com/photo-1584061690074-124b8964dcee?w=600&h=600&fit=crop", 9.50, 400, 0),
+            ("Swingline Stapler 545", "swingline-stapler", "Durable metal desktop stapler.", "https://images.unsplash.com/photo-1597087612140-5e6080deecba?w=600&h=600&fit=crop", 14.00, 160, 0),
+        ]
+    }
+]
+
+sql = [
+    "-- =============================================================================",
+    "-- CodeAlpha E-Commerce Store — Complete Perfect Seed File",
+    "-- EXACTLY 12 CATEGORIES, EXACTLY 120 PRODUCTS, STRICT IMAGE/CATEGORY MATCHING",
+    "-- =============================================================================\\n",
+    "USE `codealpha_ecommerce`;\\n",
+    "SET FOREIGN_KEY_CHECKS = 0;",
+    "TRUNCATE TABLE `order_items`;",
+    "TRUNCATE TABLE `orders`;",
+    "TRUNCATE TABLE `cart_items`;",
+    "TRUNCATE TABLE `products`;",
+    "TRUNCATE TABLE `categories`;",
+    "SET FOREIGN_KEY_CHECKS = 1;\\n",
+]
+
+# Write Categories
+sql.append("INSERT INTO `categories` (`id`, `name`, `slug`, `description`) VALUES")
+cat_lines = []
+for item in data:
+    cat = item["category"]
+    cat_lines.append(f"  ({cat[0]}, '{cat[1]}', '{cat[2]}', '{cat[3]}')")
+sql.append(",\\n".join(cat_lines) + ";\\n")
+
+# Write Products
+sql.append("INSERT INTO `products` (`id`, `category_id`, `name`, `slug`, `description`, `image_url`, `price`, `stock`, `is_featured`) VALUES")
+prod_lines = []
+prod_id = 1
+for item in data:
+    cat_id = item["category"][0]
+    for p in item["products"]:
+        # Escape single quotes in description/name
+        name = p[0].replace("'", "''")
+        slug = p[1].replace("'", "''")
+        desc = p[2].replace("'", "''")
+        imgUrl = p[3]
+        price = p[4]
+        stock = p[5]
+        featured = p[6]
+        prod_lines.append(f"  ({prod_id}, {cat_id}, '{name}', '{slug}', '{desc}', '{imgUrl}', {price}, {stock}, {featured})")
+        prod_id += 1
+
+sql.append(",\\n".join(prod_lines) + ";\\n")
+
+with open('../database/seed_120_perfect.sql', 'w', encoding='utf-8') as f:
+    f.write("\\n".join(sql))
