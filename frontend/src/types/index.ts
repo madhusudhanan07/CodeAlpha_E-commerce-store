@@ -34,6 +34,52 @@ export interface User {
 
 // ── Product ───────────────────────────────────────────────────────────────────
 
+export interface ProductGalleryImage {
+  id: number;
+  product_id: number;
+  image_url: string;
+  display_order: number;
+}
+
+export interface ProductSpecification {
+  id: number;
+  product_id: number;
+  spec_key: string;
+  spec_value: string;
+}
+
+export interface ProductReview {
+  id: number;
+  product_id: number;
+  user_id?: number;
+  user_name: string;
+  user_email?: string;
+  firebase_uid?: string;
+  user_avatar: string | null;
+  rating: number;
+  title: string;
+  review: string;
+  verified_purchase: 0 | 1 | boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface RatingDistribution {
+  5: number;
+  4: number;
+  3: number;
+  2: number;
+  1: number;
+}
+
+export interface ProductReviewsData {
+  average_rating: number;
+  total_reviews: number;
+  review_count: number;
+  rating_distribution: RatingDistribution;
+  reviews: ProductReview[];
+}
+
 /** Full product shape matching the products table + categories JOIN */
 export interface Product {
   id: number;
@@ -49,6 +95,14 @@ export interface Product {
   is_featured: 0 | 1;
   created_at: string;
   updated_at: string;
+
+  // Extended dynamic details from MySQL
+  gallery?: ProductGalleryImage[];
+  specifications?: ProductSpecification[];
+  reviews?: ProductReview[];
+  average_rating?: number;
+  review_count?: number;
+  related_products?: Product[];
 }
 
 /** Shape returned by the list/search/featured endpoints */
@@ -85,6 +139,13 @@ export interface CartState {
   cart: CartItem[];
   count: number;
   total_price: number;
+}
+
+// ── Wishlist ──────────────────────────────────────────────────────────────────
+
+export interface WishlistState {
+  wishlist: Product[];
+  count: number;
 }
 
 // ── Order ─────────────────────────────────────────────────────────────────────

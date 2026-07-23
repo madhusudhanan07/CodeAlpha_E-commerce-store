@@ -1,16 +1,7 @@
 /**
- * productRoutes.js — Product API Routes
+ * productRoutes.js — Product API Routes with Recommendation Engine
  *
  * Mount point: /api/products  (registered in app.js)
- *
- * Routes (all public — no auth required for reading the catalogue):
- *   GET /api/products                    → List all (supports ?search= & ?featured=1)
- *   GET /api/products/featured           → Featured products only
- *   GET /api/products/category/:category → Products by category slug
- *   GET /api/products/slug/:slug         → Single product by slug
- *   GET /api/products/:id                → Single product by numeric ID
- *
- * Order matters: specific paths before parameterisedones.
  */
 
 import { Router } from 'express';
@@ -20,14 +11,48 @@ import {
   getProductsByCategory,
   getProductById,
   getProductBySlug,
+  getProductGallery,
+  getProductSpecifications,
 } from '../controllers/productController.js';
+import {
+  getProductReviews,
+  addProductReview,
+} from '../controllers/reviewController.js';
+import {
+  getRelatedProducts,
+  getFrequentlyBought,
+  getRecentlyViewed,
+  recordRecentlyViewed,
+  getRecommended,
+  getBestSellers,
+  getTrending,
+} from '../controllers/recommendationController.js';
+import verifyFirebaseToken from '../middleware/verifyFirebaseToken.js';
 
 const router = Router();
 
-// ── Specific routes first (before /:id catches everything) ────────────────────
+// ── Specific static routes (must come BEFORE /:id) ───────────────────────────
 router.get('/featured',           getFeaturedProducts);
 router.get('/category/:category', getProductsByCategory);
 router.get('/slug/:slug',         getProductBySlug);
+
+// Recommendation Collection Routes
+router.get('/recently-viewed',    getRecentlyViewed);
+router.post('/recently-viewed',   recordRecentlyViewed);
+router.get('/recommended',        getRecommended);
+router.get('/best-sellers',       getBestSellers);
+router.get('/trending',           getTrending);
+
+// ── Sub-resource routes ───────────────────────────────────────────────────────
+router.get('/:id/gallery',           getProductGallery);
+router.get('/:id/images',            getProductGallery);
+router.get('/:id/specifications',    getProductSpecifications);
+router.get('/:id/reviews',           getProductReviews);
+router.get('/:id/related',           getRelatedProducts);
+router.get('/:id/frequently-bought', getFrequentlyBought);
+
+// Write review (requires Firebase authentication)
+router.post('/:id/reviews', verifyFirebaseToken, addProductReview);
 
 // ── Collection & single-by-ID ─────────────────────────────────────────────────
 router.get('/',    getAllProducts);

@@ -23,6 +23,8 @@ import productRoutes from './routes/productRoutes.js';
 
 import cartRoutes    from './routes/cartRoutes.js';
 import orderRoutes   from './routes/orderRoutes.js';
+import wishlistRoutes from './routes/wishlistRoutes.js';
+import reviewRoutes   from './routes/reviewRoutes.js';
 
 // ─── App Initialization ───────────────────────────────────────────────────────
 const app = express();
@@ -54,6 +56,12 @@ app.use('/api/cart',     cartRoutes);
 
 // Orders (checkout + history)
 app.use('/api/orders',   orderRoutes);
+
+// Wishlist (Favorites)
+app.use('/api/wishlist', wishlistRoutes);
+
+// Reviews (PUT/DELETE single review)
+app.use('/api/reviews',  reviewRoutes);
 
 // ─── Error Handling ───────────────────────────────────────────────────────────
 

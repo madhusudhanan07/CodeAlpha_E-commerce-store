@@ -1,145 +1,76 @@
 /**
- * OrdersPage.tsx — My Orders Page with Order Detail Modal
+ * OrdersPage.tsx — Customer Order History & Tracking
  *
- * Displays:
- *  - List of all user orders (Order ID, Date, Status Badge, Total)
- *  - Clicking an order opens a fullscreen modal with:
- *    - Order info (ID, date, status, payment method)
- *    - Purchased products with quantity, price, and line totals
- *    - Shipping address
- *    - Order total breakdown
- *
- * Order statuses have distinct colored badges:
- *  Processing → amber, Confirmed → blue, Shipped → purple, Delivered → green, Cancelled → red
+ * Displays all past and active orders for the authenticated user,
+ * with status color badges and interactive order cancellation.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import axiosInstance from '../services/axiosInstance';
 import { useAuth } from '../context/AuthContext';
-import { fetchOrders, fetchOrderById } from '../services/orderService';
-import type { Order, OrderItem, OrderStatus } from '../types';
-import { OrderTracking } from '../components/ui/order-tracking';
-import '../styles/checkout.css';
+import toast from 'react-hot-toast';
+import type { Order, OrderItem } from '../types';
+import '../styles/pages.css';
 
-// ── Status badge class mapping ───────────────────────────────────────────────
-const statusBadgeClass = (status: OrderStatus): string => {
-  const map: Record<string, string> = {
-    Pending:    'order-status-badge--pending',
-    Processing: 'order-status-badge--processing',
-    Confirmed:  'order-status-badge--confirmed',
-    Shipped:    'order-status-badge--shipped',
-    Delivered:  'order-status-badge--delivered',
-    Cancelled:  'order-status-badge--cancelled',
-  };
-  return map[status] || 'order-status-badge--pending';
+interface OrderWithItems extends Order {
+  items?: OrderItem[];
+}
+
+const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }> = {
+  Pending:    { bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.4)', text: '#f59e0b' },
+  Processing: { bg: 'rgba(59, 130, 246, 0.15)', border: 'rgba(59, 130, 246, 0.4)', text: '#60a5fa' },
+  Shipped:    { bg: 'rgba(139, 92, 246, 0.15)', border: 'rgba(139, 92, 246, 0.4)', text: '#a78bfa' },
+  Delivered:  { bg: 'rgba(34, 197, 94, 0.15)',  border: 'rgba(34, 197, 94, 0.4)',  text: '#4ade80' },
+  Cancelled:  { bg: 'rgba(239, 68, 68, 0.15)',  border: 'rgba(239, 68, 68, 0.4)',  text: '#f87171' },
 };
 
 const OrdersPage: React.FC = () => {
   const { isAuthenticated } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
+
+  const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
 
-  // Detail modal state
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [selectedItems, setSelectedItems] = useState<OrderItem[]>([]);
-  const [detailLoading, setDetailLoading] = useState(false);
-
-  // ── Fetch orders ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const loadOrders = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await fetchOrders();
-        setOrders(data.orders);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load orders.');
-      } finally {
-        setLoading(false);
+  const fetchOrders = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axiosInstance.get('/api/orders');
+      if (res.data && res.data.data && res.data.data.orders) {
+        setOrders(res.data.data.orders);
       }
-    };
+    } catch (err: any) {
+      console.error('Error fetching orders:', err);
+      setError(err.response?.data?.message || 'Failed to fetch order history.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    loadOrders();
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchOrders();
+    }
   }, [isAuthenticated]);
 
-  // ── Open order detail ─────────────────────────────────────────────────────
-  const openOrderDetail = useCallback(async (orderId: number) => {
-    setDetailLoading(true);
+  const handleCancelOrder = async (orderId: number) => {
+    if (!window.confirm(`Are you sure you want to cancel order #${orderId}?`)) return;
+
+    setCancellingId(orderId);
     try {
-      const data = await fetchOrderById(orderId);
-      setSelectedOrder(data.order);
-      setSelectedItems(data.items);
+      const res = await axiosInstance.put(`/api/orders/${orderId}/cancel`);
+      if (res.data && res.data.success) {
+        toast.success(`Order #${orderId} cancelled successfully.`);
+        fetchOrders();
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to load order details.');
+      toast.error(err.response?.data?.message || 'Failed to cancel order.');
     } finally {
-      setDetailLoading(false);
+      setCancellingId(null);
     }
-  }, []);
-
-  // ── Close detail modal ────────────────────────────────────────────────────
-  const closeDetail = useCallback(() => {
-    setSelectedOrder(null);
-    setSelectedItems([]);
-  }, []);
-
-  // Close on Escape key
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeDetail();
-    };
-    if (selectedOrder) {
-      document.addEventListener('keydown', handleKey);
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.removeEventListener('keydown', handleKey);
-      document.body.style.overflow = '';
-    };
-  }, [selectedOrder, closeDetail]);
-
-  // ── Format date ───────────────────────────────────────────────────────────
-  const formatDate = (dateStr: string): string => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
-
-  // ── Generate Tracking Steps ───────────────────────────────────────────────
-  const generateTrackingSteps = (status: OrderStatus, createdAtStr: string) => {
-    const defaultSteps = [
-      { name: "Order Placed", key: 'Pending' },
-      { name: "Processing", key: 'Processing' },
-      { name: "Confirmed", key: 'Confirmed' },
-      { name: "Shipped", key: 'Shipped' },
-      { name: "Delivered", key: 'Delivered' }
-    ];
-
-    if (status === 'Cancelled') {
-      return [
-        { name: "Order Placed", timestamp: formatDate(createdAtStr), isCompleted: true },
-        { name: "Cancelled", timestamp: "Status updated recently", isCompleted: true }
-      ];
-    }
-    
-    let currentIndex = defaultSteps.findIndex(s => s.key === status);
-    if (currentIndex === -1) currentIndex = 0; // fallback
-
-    return defaultSteps.map((step, idx) => ({
-      name: step.name,
-      timestamp: idx === 0 ? formatDate(createdAtStr) : (idx <= currentIndex ? "Completed" : "Pending"),
-      isCompleted: idx <= currentIndex
-    }));
-  };
-
-  // ── Guards ────────────────────────────────────────────────────────────────
 
   if (!isAuthenticated) {
     return (
@@ -147,217 +78,159 @@ const OrdersPage: React.FC = () => {
         <div className="empty-state">
           <span className="empty-state__icon">🔒</span>
           <h1 className="empty-state__title">Please Sign In</h1>
-          <p className="empty-state__desc">Sign in to view your orders.</p>
-          <Link to="/login" className="order-success__btn order-success__btn--primary" style={{ marginTop: '1.5rem' }}>
-            Sign In
+          <p className="empty-state__desc">Sign in to view your order history and track active shipments.</p>
+          <Link to="/login" className="hero__btn--primary" style={{ marginTop: '1rem', display: 'inline-block' }}>
+            Sign In Now
           </Link>
         </div>
       </main>
     );
   }
-
-  if (loading) {
-    return (
-      <div className="checkout-loading">
-        <span className="checkout-loading__spinner" />
-        <p>Loading your orders...</p>
-      </div>
-    );
-  }
-
-  if (error && orders.length === 0) {
-    return (
-      <main className="container page-content">
-        <div className="empty-state">
-          <span className="empty-state__icon">⚠️</span>
-          <h1 className="empty-state__title">Something went wrong</h1>
-          <p className="empty-state__desc">{error}</p>
-        </div>
-      </main>
-    );
-  }
-
-  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <main className="orders-page container">
+    <main className="container page-content">
       <header className="page-header">
         <h1 className="page-title">My Orders</h1>
-        <p className="page-subtitle">
-          {orders.length === 0
-            ? "You haven't placed any orders yet."
-            : `You have ${orders.length} order${orders.length !== 1 ? 's' : ''}.`}
-        </p>
+        <p className="page-subtitle">Track your recent orders and review purchase history</p>
       </header>
 
-      {orders.length === 0 ? (
-        <div className="empty-state">
-          <span className="empty-state__icon">📦</span>
-          <h2 className="empty-state__title">No orders yet</h2>
-          <p className="empty-state__desc">
-            Start shopping to see your orders here.
-          </p>
-          <Link
-            to="/products"
-            className="order-success__btn order-success__btn--primary"
-            style={{ marginTop: '1.5rem' }}
-          >
-            Browse Products
-          </Link>
-        </div>
-      ) : (
-        <div className="orders-list">
-          {orders.map((order, index) => (
-            <div
-              key={order.id}
-              className="order-card"
-              onClick={() => openOrderDetail(order.id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter') openOrderDetail(order.id); }}
-              style={{ animationDelay: `${index * 0.05}s` }}
-              aria-label={`Order #${order.id}`}
-            >
-              <div className="order-card__header">
-                <div>
-                  <div className="order-card__id">
-                    Order <span>#{order.id}</span>
-                  </div>
-                  <div className="order-card__date">{formatDate(order.created_at)}</div>
-                </div>
-                <span className={`order-status-badge ${statusBadgeClass(order.order_status)}`}>
-                  <span className="order-status-dot" />
-                  {order.order_status}
-                </span>
-              </div>
-
-              <div className="order-card__footer">
-                <div>
-                  <div className="order-card__total">${Number(order.total_amount).toFixed(2)}</div>
-                  <div className="order-card__payment">{order.payment_method}</div>
-                </div>
-                <span className="order-card__arrow">→</span>
-              </div>
-            </div>
+      {/* Loading Skeleton */}
+      {loading && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="skeleton" style={{ height: '220px', borderRadius: 'var(--radius-xl)' }} />
           ))}
         </div>
       )}
 
-      {/* ── Order Detail Modal ──────────────────────────────────────────────── */}
-      {(selectedOrder || detailLoading) && (
-        <div
-          className="order-detail-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeDetail();
-          }}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Order details"
-        >
-          {detailLoading ? (
-            <div className="order-detail" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
-              <div className="checkout-loading" style={{ minHeight: 'auto' }}>
-                <span className="checkout-loading__spinner" />
-                <p>Loading order details...</p>
-              </div>
-            </div>
-          ) : selectedOrder && (
-            <div className="order-detail">
-              {/* Header */}
-              <div className="order-detail__header">
-                <div>
-                  <h2 className="order-detail__title">
-                    Order <span>#{selectedOrder.id}</span>
-                  </h2>
-                  <p className="order-detail__meta">
-                    {formatDate(selectedOrder.created_at)}
-                    {' · '}
-                    <span className={`order-status-badge ${statusBadgeClass(selectedOrder.order_status)}`}>
-                      <span className="order-status-dot" />
-                      {selectedOrder.order_status}
-                    </span>
-                  </p>
-                </div>
-                <button
-                  className="order-detail__close"
-                  onClick={closeDetail}
-                  aria-label="Close order details"
-                >
-                  ✕
-                </button>
-              </div>
+      {/* Error State */}
+      {error && !loading && (
+        <div className="empty-state">
+          <span className="empty-state__icon">⚠️</span>
+          <h1 className="empty-state__title">Failed to load orders</h1>
+          <p className="empty-state__desc">{error}</p>
+          <button className="hero__btn--primary" style={{ marginTop: '1rem' }} onClick={fetchOrders}>
+            Try Again
+          </button>
+        </div>
+      )}
 
-              {/* Purchased Items */}
-              <div className="order-detail__section">
-                <h3 className="order-detail__section-title">Purchased Items</h3>
-                <div className="order-detail__items">
-                  {selectedItems.map((item) => (
-                    <div key={item.id} className="order-detail-item">
-                      <img
-                        src={item.product_image || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=100&h=100&fit=crop&q=80'}
-                        alt={item.product_name}
-                        className="order-detail-item__image"
-                      />
-                      <div className="order-detail-item__info">
-                        <div className="order-detail-item__name">{item.product_name}</div>
-                        <div className="order-detail-item__meta">
-                          Qty: {item.quantity} × ${Number(item.unit_price).toFixed(2)}
+      {/* Empty State */}
+      {!loading && !error && orders.length === 0 && (
+        <div className="empty-state">
+          <span className="empty-state__icon">📦</span>
+          <h1 className="empty-state__title">No orders found</h1>
+          <p className="empty-state__desc">You haven't placed any orders yet. Explore our store to start shopping!</p>
+          <Link to="/products" className="hero__btn--primary" style={{ marginTop: '1.5rem', display: 'inline-block' }}>
+            Browse Products
+          </Link>
+        </div>
+      )}
+
+      {/* Orders List */}
+      {!loading && !error && orders.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {orders.map((order) => {
+            const statusConfig = STATUS_COLORS[order.order_status] || STATUS_COLORS.Pending;
+            const isCancellable = order.order_status === 'Pending' || order.order_status === 'Processing';
+            const dateStr = new Date(order.created_at).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            });
+
+            return (
+              <div
+                key={order.id}
+                style={{
+                  background: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-xl)',
+                  padding: '1.5rem',
+                  boxShadow: 'var(--shadow-md)',
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                  <div>
+                    <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-text)', margin: 0 }}>
+                      Order #{order.id}
+                    </h2>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Placed on {dateStr}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: 'var(--radius-full)',
+                        background: statusConfig.bg,
+                        border: `1px solid ${statusConfig.border}`,
+                        color: statusConfig.text,
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                      }}
+                    >
+                      {order.order_status}
+                    </span>
+
+                    <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--color-text)' }}>
+                      ${Number(order.total_amount).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                <hr style={{ borderColor: 'var(--color-border)', opacity: 0.5, margin: '1rem 0' }} />
+
+                {/* Items List */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                  {order.items && order.items.length > 0 ? (
+                    order.items.map((item) => (
+                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <img
+                          src={item.product_image || 'https://placehold.co/60x60/1a1a24/6c63ff?text=Product'}
+                          alt={item.product_name}
+                          style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '8px' }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <Link to={`/products/${item.product_id}`} style={{ fontWeight: 600, color: 'var(--color-text)', textDecoration: 'none' }}>
+                            {item.product_name}
+                          </Link>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+                            Qty: {item.quantity} × ${Number(item.unit_price).toFixed(2)}
+                          </div>
+                        </div>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-text)' }}>
+                          ${Number(item.line_total).toFixed(2)}
                         </div>
                       </div>
-                      <span className="order-detail-item__total">
-                        ${Number(item.line_total).toFixed(2)}
-                      </span>
+                    ))
+                  ) : (
+                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+                      Payment Method: {order.payment_method}
                     </div>
-                  ))}
+                  )}
+                </div>
+
+                {/* Footer Actions */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', alignItems: 'center' }}>
+                  {isCancellable && (
+                    <button
+                      type="button"
+                      className="cart-item__remove"
+                      onClick={() => handleCancelOrder(order.id)}
+                      disabled={cancellingId === order.id}
+                      style={{ fontSize: '0.85rem' }}
+                    >
+                      {cancellingId === order.id ? 'Cancelling…' : 'Cancel Order'}
+                    </button>
+                  )}
                 </div>
               </div>
-
-              {/* Order Tracking */}
-              <div className="order-detail__section">
-                <h3 className="order-detail__section-title">Order Tracking</h3>
-                <div style={{ padding: '1rem 0' }}>
-                  <OrderTracking 
-                    steps={generateTrackingSteps(selectedOrder.order_status, selectedOrder.created_at)} 
-                  />
-                </div>
-              </div>
-
-              {/* Shipping Address */}
-              {selectedOrder.shipping_address && (
-                <div className="order-detail__section">
-                  <h3 className="order-detail__section-title">Shipping Address</h3>
-                  <div className="order-detail__address">
-                    <strong>{selectedOrder.shipping_address.full_name}</strong>
-                    <br />
-                    {selectedOrder.shipping_address.address}
-                    <br />
-                    {selectedOrder.shipping_address.city}, {selectedOrder.shipping_address.state} — {selectedOrder.shipping_address.zip_code}
-                    <br />
-                    📞 {selectedOrder.shipping_address.mobile}
-                  </div>
-                </div>
-              )}
-
-              {/* Order Total */}
-              <div className="order-detail__section">
-                <h3 className="order-detail__section-title">Payment Summary</h3>
-                <div className="order-detail__totals">
-                  <div className="order-detail__totals-row">
-                    <span>Payment Method</span>
-                    <span>{selectedOrder.payment_method}</span>
-                  </div>
-                  <div className="order-detail__totals-row">
-                    <span>Payment Status</span>
-                    <span>{selectedOrder.payment_status}</span>
-                  </div>
-                  <div className="order-detail__totals-row order-detail__totals-row--grand">
-                    <span>Grand Total</span>
-                    <span>${Number(selectedOrder.total_amount).toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+            );
+          })}
         </div>
       )}
     </main>

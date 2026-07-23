@@ -1,19 +1,8 @@
 /**
  * orderController.js — Order Processing Business Logic
  *
- * Handles checkout, order creation, and order retrieval.
- * Uses MySQL transactions to ensure atomicity during order placement.
- *
- * Flow for POST /api/orders (place order):
- *  1. Resolve Firebase UID → MySQL user ID
- *  2. Fetch cart items for user
- *  3. Validate stock availability for each item
- *  4. Calculate grand total
- *  5. Create order record (within transaction)
- *  6. Bulk-insert order items (within transaction)
- *  7. Decrement product stock for each item (within transaction)
- *  8. Clear user's cart (within transaction)
- *  9. Return order confirmation
+ * Handles checkout, order creation, order retrieval, and cancellation.
+ * Uses MySQL transactions to ensure atomicity during order placement and cancellation.
  */
 
 import pool from '../config/db.js';
@@ -42,7 +31,12 @@ export const placeOrder = async (req, res, next) => {
       });
     }
 
-    const { shipping_address, payment_method = 'Cash on Delivery' } = req.body;
+    const {
+      shipping_address,
+      payment_method = 'Cash on Delivery',
+      delivery_method = 'Standard Delivery',
+      coupon_code = null,
+    } = req.body;
 
     // ── 1. Validate shipping address ─────────────────────────────────────────
     if (!shipping_address) {
@@ -62,7 +56,7 @@ export const placeOrder = async (req, res, next) => {
     }
 
     // ── 2. Validate payment method ───────────────────────────────────────────
-    const validPaymentMethods = ['Cash on Delivery', 'UPI', 'Credit/Debit Card'];
+    const validPaymentMethods = ['Cash on Delivery', 'Credit/Debit Card', 'UPI', 'Wallet'];
     if (!validPaymentMethods.includes(payment_method)) {
       return res.status(400).json({
         success: false,
@@ -112,9 +106,23 @@ export const placeOrder = async (req, res, next) => {
       });
     }
 
-    // ── 5. Calculate delivery charge & grand total ───────────────────────────
-    const deliveryCharge = subtotal >= 500 ? 0 : 40;
-    const grandTotal = subtotal + deliveryCharge;
+    // ── 5. Calculate shipping fee, tax (8%), discount & grand total ──────────
+    let deliveryCharge = 0;
+    if (delivery_method === 'Express Delivery') {
+      deliveryCharge = 15;
+    } else if (delivery_method === 'Store Pickup') {
+      deliveryCharge = 0;
+    } else {
+      deliveryCharge = subtotal >= 50 ? 0 : 10;
+    }
+
+    const tax = Number((subtotal * 0.08).toFixed(2));
+    let discount = 0;
+    if (coupon_code && coupon_code.toUpperCase() === 'CODEALPHA20') {
+      discount = Number((subtotal * 0.20).toFixed(2));
+    }
+
+    const grandTotal = Number((subtotal + deliveryCharge + tax - discount).toFixed(2));
 
     // ── 6. Execute order placement in a transaction ──────────────────────────
     await connection.beginTransaction();
@@ -130,7 +138,15 @@ export const placeOrder = async (req, res, next) => {
           'Processing',
           payment_method === 'Cash on Delivery' ? 'Pending' : 'Paid',
           payment_method,
-          JSON.stringify(shipping_address),
+          JSON.stringify({
+            ...shipping_address,
+            delivery_method,
+            coupon_code,
+            subtotal,
+            tax,
+            shipping_fee: deliveryCharge,
+            discount,
+          }),
         ],
       );
 
@@ -175,8 +191,11 @@ export const placeOrder = async (req, res, next) => {
             id: orderId,
             total_amount: grandTotal,
             subtotal,
-            delivery_charge: deliveryCharge,
+            tax,
+            shipping_fee: deliveryCharge,
+            discount,
             payment_method,
+            delivery_method,
             order_status: 'Processing',
             shipping_address,
             item_count: cartItems.length,
@@ -208,19 +227,27 @@ export const getOrders = async (req, res, next) => {
 
     const orders = await OrderModel.findByUserId(userId);
 
-    // Parse shipping_address JSON for each order
-    const parsedOrders = orders.map((order) => ({
-      ...order,
-      shipping_address:
-        typeof order.shipping_address === 'string'
-          ? JSON.parse(order.shipping_address)
-          : order.shipping_address,
-    }));
+    // Join order items for each order
+    const ordersWithItems = await Promise.all(
+      orders.map(async (order) => {
+        const items = await OrderItemModel.findByOrderId(order.id);
+        const parsedAddress =
+          typeof order.shipping_address === 'string'
+            ? JSON.parse(order.shipping_address)
+            : order.shipping_address;
+
+        return {
+          ...order,
+          shipping_address: parsedAddress,
+          items,
+        };
+      }),
+    );
 
     return res.status(200).json({
       success: true,
       message: 'Orders retrieved successfully.',
-      data: { orders: parsedOrders, count: parsedOrders.length },
+      data: { orders: ordersWithItems, count: ordersWithItems.length },
     });
   } catch (error) {
     next(error);
@@ -247,7 +274,6 @@ export const getOrderById = async (req, res, next) => {
       });
     }
 
-    // Verify order belongs to user (prevents enumeration)
     const order = await OrderModel.findByIdAndUser(orderId, userId);
     if (!order) {
       return res.status(404).json({
@@ -256,10 +282,7 @@ export const getOrderById = async (req, res, next) => {
       });
     }
 
-    // Fetch line items
     const items = await OrderItemModel.findByOrderId(orderId);
-
-    // Parse shipping_address if needed
     const shippingAddress =
       typeof order.shipping_address === 'string'
         ? JSON.parse(order.shipping_address)
@@ -278,5 +301,69 @@ export const getOrderById = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+// ── PUT /api/orders/:id/cancel — Cancel an order ─────────────────────────────
+export const cancelOrder = async (req, res, next) => {
+  const connection = await pool.getConnection();
+
+  try {
+    const orderId = Number(req.params.id);
+    const userId = await resolveUserId(req.decodedUser.uid);
+
+    if (!userId) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
+
+    const order = await OrderModel.findByIdAndUser(orderId, userId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+
+    if (order.order_status === 'Shipped' || order.order_status === 'Delivered') {
+      return res.status(400).json({
+        success: false,
+        message: `Order cannot be cancelled once it is ${order.order_status.toLowerCase()}.`,
+      });
+    }
+
+    if (order.order_status === 'Cancelled') {
+      return res.status(400).json({ success: false, message: 'Order is already cancelled.' });
+    }
+
+    const items = await OrderItemModel.findByOrderId(orderId);
+
+    await connection.beginTransaction();
+
+    try {
+      // Update status to Cancelled
+      await connection.query('UPDATE orders SET order_status = ? WHERE id = ?', ['Cancelled', orderId]);
+
+      // Restore product stock
+      for (const item of items) {
+        await connection.query(
+          'UPDATE products SET stock = stock + ? WHERE id = ?',
+          [item.quantity, item.product_id],
+        );
+      }
+
+      await connection.commit();
+
+      const updatedOrder = await OrderModel.findByIdAndUser(orderId, userId);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Order cancelled successfully. Stock restored.',
+        data: { order: updatedOrder },
+      });
+    } catch (txErr) {
+      await connection.rollback();
+      throw txErr;
+    }
+  } catch (error) {
+    next(error);
+  } finally {
+    connection.release();
   }
 };

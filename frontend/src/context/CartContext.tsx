@@ -5,7 +5,7 @@
  * distributes the active cart state (items, total, count) to components.
  */
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import axiosInstance from '../services/axiosInstance';
 import { useAuth } from './AuthContext';
 import type { CartState } from '../types';
@@ -28,13 +28,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCart = async () => {
+  const fetchCart = useCallback(async () => {
     if (!currentUser) {
       setState({ cart: [], count: 0, total_price: 0 });
       setLoading(false);
       return;
     }
-    
+
     setLoading(true);
     setError(null);
     try {
@@ -44,17 +44,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err: any) {
       console.error('Error fetching cart:', err);
-      // Ignore 404 for missing cart; otherwise log
+      const msg = err.response?.data?.message || err.message || 'Failed to fetch cart';
+      setError(msg);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUser]);
 
   useEffect(() => {
     if (!authLoading) {
       fetchCart();
     }
-  }, [currentUser, authLoading]);
+  }, [currentUser, authLoading, fetchCart]);
 
   const addToCart = async (productId: number, quantity = 1) => {
     try {
@@ -63,7 +64,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setState(res.data.data);
       }
     } catch (err: any) {
-      throw new Error(err.response?.data?.message || 'Failed to add item to cart');
+      throw new Error(err.response?.data?.message || err.message || 'Failed to add item to cart');
     }
   };
 
@@ -74,7 +75,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setState(res.data.data);
       }
     } catch (err: any) {
-      throw new Error(err.response?.data?.message || 'Failed to update quantity');
+      throw new Error(err.response?.data?.message || err.message || 'Failed to update quantity');
     }
   };
 
@@ -85,7 +86,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setState(res.data.data);
       }
     } catch (err: any) {
-      throw new Error(err.response?.data?.message || 'Failed to remove item');
+      throw new Error(err.response?.data?.message || err.message || 'Failed to remove item');
     }
   };
 
@@ -96,7 +97,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setState(res.data.data);
       }
     } catch (err: any) {
-      throw new Error(err.response?.data?.message || 'Failed to clear cart');
+      throw new Error(err.response?.data?.message || err.message || 'Failed to clear cart');
     }
   };
 

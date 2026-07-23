@@ -1,34 +1,56 @@
 /**
- * Navbar.tsx — Application Navigation Bar
+ * Navbar.tsx — Modern Translucent Apple/Shopify Glass Header
  *
- * Sticky, glassmorphism header with:
- *  - Brand logo
- *  - Primary navigation links (using NavLink for active-state styling)
- *  - Auth-aware actions: shows Profile + Logout when signed in, Login + Register when not
- *  - Responsive mobile toggle (hamburger)
+ * Sticky white translucent header with:
+ *  - Brand logo (Fresh Party / CodeAlpha)
+ *  - Search bar input with search icon
+ *  - Navigation links (Home, Shop, Categories, Deals, Wishlist, Cart)
+ *  - Lucide React SVG icon badges (Heart wishlist badge, Bag cart badge, Profile, Notifications)
  */
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
+import { Search, Heart, ShoppingBag, LogOut } from 'lucide-react';
 import '../styles/Navbar.css';
-import '../styles/auth.css';
 
-const NAV_LINKS = [
-  { label: 'Home',     to: '/' },
-  { label: 'Products', to: '/products' },
-  { label: 'Cart',     to: '/cart' },
-];
-
-const Navbar: React.FC = () => {
+export const Navbar: React.FC = () => {
   const { isAuthenticated, currentUser, logout } = useAuth();
-  const { count } = useCart();
+  const { count: cartCount } = useCart();
+  const { count: wishlistCount } = useWishlist();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
   const toggleMenu = () => setMenuOpen((prev) => !prev);
   const closeMenu  = () => setMenuOpen(false);
+
+  const handleNavSectionClick = (sectionId: string) => {
+    closeMenu();
+    if (window.location.pathname === '/') {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        const headerOffset = 80;
+        const elementPosition = el.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth',
+        });
+      }
+    } else {
+      navigate(`/#${sectionId}`);
+    }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   const handleLogout = async () => {
     closeMenu();
@@ -43,129 +65,102 @@ const Navbar: React.FC = () => {
   // Display initials for avatar circle
   const initials = currentUser?.displayName
     ? currentUser.displayName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
-    : currentUser?.email?.[0]?.toUpperCase() ?? '?';
+    : currentUser?.email?.[0]?.toUpperCase() ?? 'U';
 
   return (
-    <header className="navbar" role="banner">
-      <nav className="navbar__inner container" aria-label="Main navigation">
+    <header className="navbar-modern" role="banner">
+      <div className="navbar-container container">
 
-        {/* ── Brand ─────────────────────────────────── */}
-        <Link to="/" className="navbar__brand" onClick={closeMenu} aria-label="CodeAlpha Home">
-          Code<span>Alpha</span>
+        {/* ── Brand Logo ─────────────────────────────────── */}
+        <Link to="/" className="navbar-logo" onClick={closeMenu}>
+          <div className="logo-icon-box">
+            <ShoppingBag className="w-5 h-5 text-white" />
+          </div>
+          <span className="logo-text">
+            Fresh<span className="logo-text-accent">Party</span>
+          </span>
         </Link>
 
-        {/* ── Desktop / Mobile Nav Links ─────────────── */}
-        <ul className={`navbar__nav${menuOpen ? ' open' : ''}`} role="list">
-          {NAV_LINKS.map(({ label, to }) => (
-            <li key={to}>
-              <NavLink
-                to={to}
-                end={to === '/'}
-                className={({ isActive }) =>
-                  `navbar__link${isActive ? ' active' : ''}`
-                }
-                onClick={closeMenu}
-              >
-                {label} {label === 'Cart' && count > 0 && `(${count})`}
-              </NavLink>
-            </li>
-          ))}
+        {/* ── Center Rounded Search Bar ───────────────────── */}
+        <form className="navbar-search-form" onSubmit={handleSearchSubmit}>
+          <input
+            type="text"
+            className="navbar-search-input"
+            placeholder="Search for products, categories or brands…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <button type="submit" className="navbar-search-btn" aria-label="Search">
+            <Search className="w-4 h-4 text-gray-500" />
+          </button>
+        </form>
 
-          {/* Mobile-only auth links (visible when menu open on small screen) */}
-          {isAuthenticated && (
-            <>
-              <li className="navbar__mobile-auth">
-                <NavLink
-                  to="/orders"
-                  className={({ isActive }) =>
-                    `navbar__link${isActive ? ' active' : ''}`
-                  }
-                  onClick={closeMenu}
-                >
-                  My Orders
-                </NavLink>
-              </li>
-              <li className="navbar__mobile-auth">
-                <NavLink
-                  to="/profile"
-                  className={({ isActive }) =>
-                    `navbar__link${isActive ? ' active' : ''}`
-                  }
-                  onClick={closeMenu}
-                >
-                  Profile
-                </NavLink>
-              </li>
-            </>
-          )}
-        </ul>
+        {/* ── Nav Links ──────────────────────────────────── */}
+        <nav className={`navbar-nav-menu${menuOpen ? ' open' : ''}`}>
+          <NavLink to="/" end className={({ isActive }) => `nav-item-link${isActive ? ' active' : ''}`} onClick={closeMenu}>
+            Home
+          </NavLink>
+          <NavLink to="/products" className={({ isActive }) => `nav-item-link${isActive ? ' active' : ''}`} onClick={closeMenu}>
+            Shop
+          </NavLink>
+          <button type="button" className="nav-item-link" onClick={() => handleNavSectionClick('categories-heading')}>
+            Categories
+          </button>
+          <button type="button" className="nav-item-link" onClick={() => handleNavSectionClick('todays-deals')}>
+            Deals
+          </button>
+          <NavLink to="/orders" className={({ isActive }) => `nav-item-link${isActive ? ' active' : ''}`} onClick={closeMenu}>
+            Orders
+          </NavLink>
+        </nav>
 
-        {/* ── Actions ───────────────────────────────── */}
-        <div className="navbar__actions">
-          
+        {/* ── Right Action Icons ──────────────────────────── */}
+        <div className="navbar-action-icons">
+          {/* Wishlist Button */}
+          <Link to="/wishlist" className="icon-badge-btn" aria-label="Wishlist" onClick={closeMenu}>
+            <Heart className="w-5 h-5 text-gray-700 hover:text-red-500 transition-colors" />
+            {wishlistCount > 0 && (
+              <span className="badge-count badge-count-pink">{wishlistCount}</span>
+            )}
+          </Link>
+
+          {/* Cart Button */}
+          <Link to="/cart" className="icon-badge-btn" aria-label="Cart" onClick={closeMenu}>
+            <ShoppingBag className="w-5 h-5 text-gray-700 hover:text-blue-600 transition-colors" />
+            {cartCount > 0 && (
+              <span className="badge-count badge-count-blue">{cartCount}</span>
+            )}
+          </Link>
+
+          {/* Profile / Auth */}
           {isAuthenticated ? (
-            <>
-              {/* Avatar + display name */}
-              <NavLink
-                to="/profile"
-                className="navbar__avatar"
-                onClick={closeMenu}
-                aria-label="My profile"
-              >
-                <span className="navbar__avatar-circle" aria-hidden="true">
-                  {initials}
+            <div className="user-profile-menu">
+              <Link to="/profile" className="user-avatar-pill" onClick={closeMenu}>
+                <span className="avatar-initials">{initials}</span>
+                <span className="user-name-text">
+                  {currentUser?.displayName?.split(' ')[0] ?? 'Account'}
                 </span>
-                <span className="navbar__avatar-name">
-                  {currentUser?.displayName?.split(' ')[0] ?? 'Profile'}
-                </span>
-              </NavLink>
+              </Link>
 
-              {/* Logout */}
-              <button
-                id="navbar-logout"
-                className="navbar__logout-btn"
-                onClick={handleLogout}
-                aria-label="Sign out"
-              >
-                Logout
+              <button className="logout-icon-btn" onClick={handleLogout} title="Logout">
+                <LogOut className="w-4 h-4 text-gray-600 hover:text-red-600" />
               </button>
-            </>
+            </div>
           ) : (
-            <>
-              <Link
-                to="/login"
-                className="navbar__link"
-                onClick={closeMenu}
-                aria-label="Sign in"
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/register"
-                className="navbar__btn--primary"
-                onClick={closeMenu}
-                aria-label="Create account"
-              >
-                Register
-              </Link>
-            </>
+            <Link to="/login" className="btn-signin-pill" onClick={closeMenu}>
+              Sign In
+            </Link>
           )}
 
-          {/* ── Mobile Hamburger ──────────────────────── */}
-          <button
-            className="navbar__toggle"
-            onClick={toggleMenu}
-            aria-expanded={menuOpen}
-            aria-controls="main-nav"
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-          >
+          {/* Mobile Hamburger Toggle */}
+          <button className="mobile-menu-toggle" onClick={toggleMenu} aria-label="Toggle navigation">
             <span />
             <span />
             <span />
           </button>
         </div>
 
-      </nav>
+      </div>
     </header>
   );
 };

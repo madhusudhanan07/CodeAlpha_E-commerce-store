@@ -1,12 +1,7 @@
 /**
  * main.tsx — Application Entry Point
  *
- * Mounts the React application to the DOM.
- * Wraps the app in:
- *  - React.StrictMode — highlights potential issues in development
- *  - AuthProvider     — provides global authentication context
- *
- * The global CSS design system is imported here so it applies universally.
+ * Mounts the React application to the DOM with Auth, Cart, and Wishlist providers.
  */
 
 import { StrictMode } from 'react';
@@ -14,6 +9,7 @@ import { createRoot } from 'react-dom/client';
 import './styles/global.css';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { WishlistProvider } from './context/WishlistContext';
 import AppRouter from './routes/AppRouter';
 
 const rootElement = document.getElementById('root');
@@ -26,7 +22,9 @@ createRoot(rootElement).render(
   <StrictMode>
     <AuthProvider>
       <CartProvider>
-        <AppRouter />
+        <WishlistProvider>
+          <AppRouter />
+        </WishlistProvider>
       </CartProvider>
     </AuthProvider>
   </StrictMode>,

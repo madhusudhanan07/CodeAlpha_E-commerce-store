@@ -31,6 +31,10 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
+const ITEMS_PER_PAGE = 12;
+
+type SortOption = 'default' | 'price-asc' | 'price-desc' | 'name-asc' | 'name-desc';
+
 const ProductsPage: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -44,37 +48,50 @@ const ProductsPage: React.FC = () => {
 
   const [searchInput, setSearchInput] = useState(searchParams.get('search') ?? '');
   const [activeCategory, setActiveCategory] = useState(searchParams.get('category') ?? '');
+  const [sortBy, setSortBy] = useState<SortOption>((searchParams.get('sort') as SortOption) || 'default');
+  const [currentPage, setCurrentPage] = useState<number>(Number(searchParams.get('page')) || 1);
 
   const debouncedSearch = useDebounce(searchInput, 350);
 
-  // ── Load all products on mount ─────────────────────────────────────────────
-  useEffect(() => {
+  // ── Load all products ──────────────────────────────────────────────────────
+  const loadProducts = useCallback(() => {
     setLoading(true);
     setError(null);
     fetchProducts()
       .then((res) => setAllProducts(res.products))
-      .catch((err: Error) => setError(err.message))
+      .catch((err: Error) => setError(err.message || 'Failed to load products.'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   // ── Sync filters → URL ─────────────────────────────────────────────────────
   useEffect(() => {
     const params: Record<string, string> = {};
     if (debouncedSearch) params.search = debouncedSearch;
     if (activeCategory) params.category = activeCategory;
+    if (sortBy !== 'default') params.sort = sortBy;
+    if (currentPage > 1) params.page = String(currentPage);
     setSearchParams(params, { replace: true });
-  }, [debouncedSearch, activeCategory, setSearchParams]);
+  }, [debouncedSearch, activeCategory, sortBy, currentPage, setSearchParams]);
 
-  // ── Derived categories list (unique, from loaded data) ────────────────────
+  // Reset pagination on filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, activeCategory, sortBy]);
+
+  // ── Derived categories list ───────────────────────────────────────────────
   const categories = useMemo(() => {
     const seen = new Map<string, string>();
     allProducts.forEach((p) => seen.set(p.category_slug, p.category_name));
     return Array.from(seen, ([slug, name]) => ({ slug, name }));
   }, [allProducts]);
 
-  // ── Filtered products ──────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    let list = allProducts;
+  // ── Filtered & Sorted products ─────────────────────────────────────────────
+  const sortedProducts = useMemo(() => {
+    let list = [...allProducts];
 
     if (activeCategory) {
       list = list.filter((p) => p.category_slug === activeCategory);
@@ -89,8 +106,26 @@ const ProductsPage: React.FC = () => {
       );
     }
 
-    return list;
-  }, [allProducts, activeCategory, debouncedSearch]);
+    switch (sortBy) {
+      case 'price-asc':
+        return list.sort((a, b) => Number(a.price) - Number(b.price));
+      case 'price-desc':
+        return list.sort((a, b) => Number(b.price) - Number(a.price));
+      case 'name-asc':
+        return list.sort((a, b) => a.name.localeCompare(b.name));
+      case 'name-desc':
+        return list.sort((a, b) => b.name.localeCompare(a.name));
+      default:
+        return list;
+    }
+  }, [allProducts, activeCategory, debouncedSearch, sortBy]);
+
+  // ── Paginated products ─────────────────────────────────────────────────────
+  const totalPages = Math.ceil(sortedProducts.length / ITEMS_PER_PAGE);
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return sortedProducts.slice(start, start + ITEMS_PER_PAGE);
+  }, [sortedProducts, currentPage]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleCategoryChange = useCallback((slug: string) => {
@@ -136,18 +171,38 @@ const ProductsPage: React.FC = () => {
           onChange={handleSearchChange}
           placeholder="Search products…"
         />
-        <ProductFilters
-          categories={categories}
-          active={activeCategory}
-          onChange={handleCategoryChange}
-        />
+
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between' }}>
+          <ProductFilters
+            categories={categories}
+            active={activeCategory}
+            onChange={handleCategoryChange}
+          />
+
+          {/* Sort Dropdown */}
+          <div className="products-page__sort">
+            <label htmlFor="price-sort-select" className="products-page__sort-label">Sort by:</label>
+            <select
+              id="price-sort-select"
+              className="products-page__sort-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+            >
+              <option value="default">Featured / Default</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="name-asc">Name: A to Z</option>
+              <option value="name-desc">Name: Z to A</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Result count */}
       {!loading && !error && (
         <p className="products-page__count">
-          Showing <strong>{filtered.length}</strong>{' '}
-          {filtered.length === 1 ? 'product' : 'products'}
+          Showing <strong>{paginatedProducts.length}</strong> of <strong>{sortedProducts.length}</strong>{' '}
+          {sortedProducts.length === 1 ? 'product' : 'products'}
           {activeCategory && ` in "${categories.find((c) => c.slug === activeCategory)?.name ?? activeCategory}"`}
           {debouncedSearch && ` matching "${debouncedSearch}"`}
         </p>
@@ -159,19 +214,57 @@ const ProductsPage: React.FC = () => {
           <span className="empty-state__icon">⚠️</span>
           <p className="empty-state__title">Failed to load products</p>
           <p className="empty-state__desc">{error}</p>
+          <button
+            className="product-card__btn"
+            style={{ marginTop: '1rem' }}
+            onClick={loadProducts}
+          >
+            Retry
+          </button>
         </div>
       )}
 
       {/* Grid */}
       {!error && (
-        <ProductGrid
-          products={filtered}
-          loading={loading}
-          skeletonCount={8}
-          emptyTitle="No products found"
-          emptyDesc="Try clearing your filters or searching with a different term."
-          onAddToCart={handleAddToCart}
-        />
+        <>
+          <ProductGrid
+            products={paginatedProducts}
+            loading={loading}
+            skeletonCount={8}
+            emptyTitle="No products found"
+            emptyDesc="Try clearing your filters or searching with a different term."
+            onAddToCart={handleAddToCart}
+          />
+
+          {/* Pagination Controls */}
+          {!loading && totalPages > 1 && (
+            <nav className="products-page__pagination" aria-label="Pagination Navigation">
+              <button
+                className="pagination-btn"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  className={`pagination-btn ${page === currentPage ? 'pagination-btn--active' : ''}`}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                className="pagination-btn"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Next
+              </button>
+            </nav>
+          )}
+        </>
       )}
     </main>
   );

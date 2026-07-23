@@ -1,7 +1,7 @@
 /**
  * cartRoutes.js — API Routes for Shopping Cart
  *
- * All routes are protected by verifyFirebaseToken mapping to the current user.
+ * All routes are protected by verifyFirebaseToken mapping to the current authenticated user.
  */
 
 import express from 'express';
@@ -28,8 +28,10 @@ router.get('/', asyncHandler(getCart));
 // POST /api/cart (add product)
 router.post('/', asyncHandler(addCartItem));
 
-// DELETE /api/cart/clear (empty the cart completely)
-// NOTE: Must be defined BEFORE /:id to avoid 'clear' being parsed as an :id
+// DELETE /api/cart (clear cart)
+router.delete('/', asyncHandler(clearCart));
+
+// DELETE /api/cart/clear (clear cart alias)
 router.delete('/clear', asyncHandler(clearCart));
 
 // PUT /api/cart/:id (update quantity where :id = product_id)

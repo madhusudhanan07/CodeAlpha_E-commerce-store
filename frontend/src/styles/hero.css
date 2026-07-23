@@ -1,0 +1,565 @@
+/* ==========================================================================
+   Apple & Shopify Light Theme Hero Section CSS — Matching Design Mockup Image
+   ========================================================================== */
+
+/* ── Hero Section Wrapper ────────────────────────────────────────────────── */
+
+.hero-redesign-light {
+  position: relative;
+  min-height: 85vh;
+  display: flex;
+  align-items: center;
+  padding: 3.5rem 0;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+.hero-grid-light {
+  display: grid;
+  grid-template-columns: 48% 52%;
+  align-items: center;
+  gap: 2.5rem;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .hero-grid-light {
+    grid-template-columns: 1fr;
+    gap: 3.5rem;
+  }
+}
+
+/* ── Left Column (Marketing Content) ─────────────────────────────────────── */
+
+.hero-left-light {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ★ Best Quality Products Badge */
+.hero-quality-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  padding: 0.4rem 0.95rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+
+.badge-star-icon {
+  font-size: 0.85rem;
+  color: #2563eb;
+}
+
+/* Headline */
+.hero-title-light {
+  font-size: clamp(2.6rem, 4.5vw, 4.2rem);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  color: #0f172a;
+}
+
+.hero-title-gradient {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+/* Subtitle */
+.hero-subtitle-light {
+  font-size: clamp(1rem, 1.25vw, 1.15rem);
+  line-height: 1.65;
+  color: #64748b;
+  max-width: 520px;
+  font-weight: 450;
+}
+
+/* Action Buttons */
+.hero-cta-group {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+/* Primary Shop Now Button */
+.btn-hero-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.95rem 2.25rem;
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  color: #ffffff;
+  font-size: 1.02rem;
+  font-weight: 700;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.35);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+}
+
+.btn-hero-primary:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 14px 35px rgba(37, 99, 235, 0.45);
+}
+
+/* Secondary Explore Categories Button */
+.btn-hero-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.95rem 2rem;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 1.02rem;
+  font-weight: 700;
+  border-radius: 14px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-decoration: none;
+}
+
+.btn-hero-secondary:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+/* ── 4 Horizontal Trust Cards Below Buttons ───────────────────────────── */
+
+.hero-trust-cards-light {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 640px) {
+  .hero-trust-cards-light {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.trust-card-light {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.trust-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.trust-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.trust-desc {
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+/* ── Right Column: Shopping Composition (Matching Image Mockup) ──────────── */
+
+.hero-composition-light {
+  position: relative;
+  width: 100%;
+  min-height: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-stage-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  height: 460px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Circular Glowing Podium Base */
+.hero-podium-glow {
+  position: absolute;
+  width: 440px;
+  height: 440px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.12) 0%, rgba(37, 99, 235, 0.06) 50%, transparent 75%);
+  filter: blur(20px);
+}
+
+.podium-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(124, 58, 237, 0.15);
+  pointer-events: none;
+}
+
+.ring-outer {
+  width: 460px;
+  height: 460px;
+  top: 0;
+}
+
+.ring-inner {
+  width: 380px;
+  height: 380px;
+  top: 40px;
+}
+
+/* Shopping Composition Group */
+.hero-composition-group {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+/* Floating Purple Shopping Bag */
+.comp-shopping-bag {
+  position: absolute;
+  left: 8%;
+  bottom: 22%;
+  width: 130px;
+  height: 160px;
+  z-index: 3;
+}
+
+.float-bag {
+  animation: floatSlow 6.5s infinite ease-in-out;
+}
+
+.bag-body {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(145deg, #7c3aed 0%, #4c1d95 100%);
+  border-radius: 18px 18px 24px 24px;
+  box-shadow: 0 16px 35px rgba(124, 58, 237, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.bag-handle {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 55px;
+  height: 35px;
+  border: 4px solid #7c3aed;
+  border-bottom: none;
+  border-radius: 20px 20px 0 0;
+}
+
+.bag-logo-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bag-brand-name {
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* Floating Metal Cart + Packages */
+.comp-cart-wrapper {
+  position: absolute;
+  right: 5%;
+  bottom: 12%;
+  width: 320px;
+  height: 280px;
+  z-index: 4;
+}
+
+.float-cart {
+  animation: floatSlow 7.5s infinite ease-in-out 0.8s;
+}
+
+.cart-svg-illustration {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 20px 30px rgba(37, 99, 235, 0.25));
+}
+
+/* Cardboard Package Boxes Stacked */
+.comp-package-stack {
+  position: absolute;
+  top: -20px;
+  left: 45px;
+  z-index: 5;
+}
+
+.package-box {
+  background: #d97706;
+  border: 1px solid #b45309;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(180, 83, 9, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.85rem;
+}
+
+.box-main {
+  width: 140px;
+  height: 90px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  flex-direction: column;
+  justify-content: center;
+}
+
+.box-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #78350f;
+  background: rgba(255, 255, 255, 0.4);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.box-secondary {
+  position: absolute;
+  top: -30px;
+  right: -20px;
+  width: 90px;
+  height: 70px;
+  background: #b45309;
+  transform: rotate(8deg);
+}
+
+/* Floating Pill Badges */
+.floating-badge {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.95rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #0f172a;
+  z-index: 6;
+}
+
+.badge-top-right {
+  top: 12%;
+  right: 2%;
+  animation: floatSlow 6s infinite ease-in-out 1.2s;
+}
+
+.badge-bottom-left {
+  bottom: 8%;
+  left: 2%;
+  animation: floatSlow 8s infinite ease-in-out 0.4s;
+}
+
+.badge-dot-green {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+@keyframes floatSlow {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+  100% { transform: translateY(0px); }
+}
+
+/* ── Category Section Light Styles (Matching Design Mockup) ──────────────── */
+
+.category-section-light {
+  padding: 4.5rem 0 3.5rem;
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
+}
+
+.section-icon-pill {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #eff6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section__title {
+  font-size: 1.85rem;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+}
+
+.section__subtitle {
+  font-size: 0.95rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+
+.section__link {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #2563eb;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: color 0.2s ease;
+}
+
+.section__link:hover {
+  color: #1d4ed8;
+}
+
+/* Category Grid 5 Columns Desktop */
+.category-grid-5cols {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 1024px) {
+  .category-grid-5cols {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .category-grid-5cols {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .category-grid-5cols {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+/* Category Card Light */
+.category-card-light {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  padding: 1.25rem 1.35rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.category-card-light:hover {
+  transform: translateY(-6px);
+  border-color: #2563eb;
+  box-shadow: 0 14px 35px rgba(37, 99, 235, 0.15);
+  background: #ffffff;
+}
+
+.cat-icon-container {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.category-card-light:hover .cat-icon-container {
+  transform: scale(1.1);
+}
+
+.cat-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.cat-title-text {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.cat-cta-link {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: color 0.2s ease;
+}
+
+.category-card-light:hover .cat-cta-link {
+  color: #2563eb;
+}
+
+.category-card-light:hover .cat-cta-arrow {
+  transform: translateX(5px);
+  color: #2563eb;
+}
