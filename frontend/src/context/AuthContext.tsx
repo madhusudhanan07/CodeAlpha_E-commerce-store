@@ -68,8 +68,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return unsubscribe;
   }, []);
 
-  // Admin status check: grants admin access to authenticated user (msudhanan2007@gmail.com / admin)
-  const isAdmin = !!currentUser;
+  // Super Admin Authorization Check: grants admin panel access strictly to msudhanan2007@gmail.com
+  const ADMIN_EMAILS = ['msudhanan2007@gmail.com'];
+  const isAdmin = !!currentUser && !!currentUser.email && ADMIN_EMAILS.includes(currentUser.email.toLowerCase());
 
   // ── register ──────────────────────────────────────────────────────────────
   const register = async (
