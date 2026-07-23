@@ -133,10 +133,14 @@ const OrdersPage: React.FC = () => {
           {orders.map((order) => {
             const statusConfig = STATUS_COLORS[order.order_status] || STATUS_COLORS.Pending;
             const isCancellable = order.order_status === 'Pending' || order.order_status === 'Processing';
-            const dateStr = new Date(order.created_at).toLocaleDateString('en-US', {
+            const dateStr = new Date(order.created_at).toLocaleString('en-US', {
               year: 'numeric',
               month: 'short',
               day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: true,
             });
 
             return (

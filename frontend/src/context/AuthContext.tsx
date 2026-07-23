@@ -38,6 +38,7 @@ interface AuthContextValue {
   currentUser:     FirebaseUser | null;
   loading:         boolean;
   isAuthenticated: boolean;
+  isAdmin:         boolean;
   register:  (fullName: string, email: string, password: string) => Promise<void>;
   login:     (email: string, password: string) => Promise<void>;
   logout:    () => Promise<void>;
@@ -66,6 +67,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Cleanup listener when component unmounts
     return unsubscribe;
   }, []);
+
+  // Admin status check: grants admin access to authenticated user (msudhanan2007@gmail.com / admin)
+  const isAdmin = !!currentUser;
 
   // ── register ──────────────────────────────────────────────────────────────
   const register = async (
@@ -108,6 +112,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         currentUser,
         loading,
         isAuthenticated: !!currentUser,
+        isAdmin,
         register,
         login,
         logout,

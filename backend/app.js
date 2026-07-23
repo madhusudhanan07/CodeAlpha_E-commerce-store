@@ -25,6 +25,7 @@ import cartRoutes    from './routes/cartRoutes.js';
 import orderRoutes   from './routes/orderRoutes.js';
 import wishlistRoutes from './routes/wishlistRoutes.js';
 import reviewRoutes   from './routes/reviewRoutes.js';
+import adminRoutes    from './routes/adminRoutes.js';
 
 // ─── App Initialization ───────────────────────────────────────────────────────
 const app = express();
@@ -62,6 +63,9 @@ app.use('/api/wishlist', wishlistRoutes);
 
 // Reviews (PUT/DELETE single review)
 app.use('/api/reviews',  reviewRoutes);
+
+// Admin Panel API
+app.use('/api/admin',    adminRoutes);
 
 // ─── Error Handling ───────────────────────────────────────────────────────────
 

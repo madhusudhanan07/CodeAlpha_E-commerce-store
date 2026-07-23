@@ -42,8 +42,8 @@ export interface ProductGalleryImage {
 }
 
 export interface ProductSpecification {
-  id: number;
-  product_id: number;
+  id?: number;
+  product_id?: number;
   spec_key: string;
   spec_value: string;
 }
@@ -92,13 +92,26 @@ export interface Product {
   image_url: string | null;
   price: number;
   stock: number;
-  is_featured: 0 | 1;
+  is_featured: 0 | 1 | number;
   created_at: string;
   updated_at: string;
 
   // Extended dynamic details from MySQL
+  brand?: string;
+  sku?: string;
+  old_price?: number | null;
+  discount_pct?: number;
+  images?: string[];
+  features?: string[];
+  tags?: string;
+  weight?: string;
+  dimensions?: string;
+  warranty?: string;
+  return_policy?: string;
+  shipping_info?: string;
+  is_active?: 0 | 1 | number;
   gallery?: ProductGalleryImage[];
-  specifications?: ProductSpecification[];
+  specifications?: ProductSpecification[] | Array<{ spec_key: string; spec_value: string }>;
   reviews?: ProductReview[];
   average_rating?: number;
   review_count?: number;

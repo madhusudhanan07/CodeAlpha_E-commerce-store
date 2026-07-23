@@ -13,11 +13,11 @@ import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
-import { Search, Heart, ShoppingBag, LogOut } from 'lucide-react';
+import { Search, Heart, ShoppingBag, LogOut, Shield } from 'lucide-react';
 import '../styles/Navbar.css';
 
 export const Navbar: React.FC = () => {
-  const { isAuthenticated, currentUser, logout } = useAuth();
+  const { isAuthenticated, currentUser, logout, isAdmin } = useAuth();
   const { count: cartCount } = useCart();
   const { count: wishlistCount } = useWishlist();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -77,7 +77,7 @@ export const Navbar: React.FC = () => {
             <ShoppingBag className="w-5 h-5 text-white" />
           </div>
           <span className="logo-text">
-            Fresh<span className="logo-text-accent">Party</span>
+            NEWONE<span className="logo-text-accent"> SHOP</span>
           </span>
         </Link>
 
@@ -112,6 +112,11 @@ export const Navbar: React.FC = () => {
           <NavLink to="/orders" className={({ isActive }) => `nav-item-link${isActive ? ' active' : ''}`} onClick={closeMenu}>
             Orders
           </NavLink>
+          {isAdmin && (
+            <NavLink to="/admin" className={({ isActive }) => `nav-item-link${isActive ? ' active' : ''}`} style={{ color: '#2563eb', fontWeight: 800 }} onClick={closeMenu}>
+              <Shield className="w-3.5 h-3.5 inline mr-1" /> Admin Panel
+            </NavLink>
+          )}
         </nav>
 
         {/* ── Right Action Icons ──────────────────────────── */}
@@ -135,6 +140,12 @@ export const Navbar: React.FC = () => {
           {/* Profile / Auth */}
           {isAuthenticated ? (
             <div className="user-profile-menu">
+              {isAdmin && (
+                <Link to="/admin" className="btn-signin-pill" style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)', padding: '0.4rem 0.85rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }} onClick={closeMenu}>
+                  <Shield className="w-3.5 h-3.5 text-white" />
+                  Admin
+                </Link>
+              )}
               <Link to="/profile" className="user-avatar-pill" onClick={closeMenu}>
                 <span className="avatar-initials">{initials}</span>
                 <span className="user-name-text">

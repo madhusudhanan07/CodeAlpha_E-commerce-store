@@ -8,7 +8,9 @@
 import { lazy } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import MainLayout         from '../layouts/MainLayout';
+import AdminLayout        from '../layouts/AdminLayout';
 import ProtectedRoute     from '../components/ProtectedRoute';
+import AdminRoute         from '../components/admin/AdminRoute';
 import ErrorPage          from '../pages/ErrorPage';
 
 // Lazy loaded views
@@ -25,6 +27,16 @@ const ProfilePage        = lazy(() => import('../pages/ProfilePage'));
 const WishlistPage       = lazy(() => import('../pages/WishlistPage'));
 const NotFoundPage       = lazy(() => import('../pages/NotFoundPage'));
 
+// Admin pages
+const AdminDashboard      = lazy(() => import('../pages/admin/AdminDashboard'));
+const AdminProductsPage   = lazy(() => import('../pages/admin/AdminProductsPage'));
+const AdminCategoriesPage = lazy(() => import('../pages/admin/AdminCategoriesPage'));
+const AdminOrdersPage     = lazy(() => import('../pages/admin/AdminOrdersPage'));
+const AdminCustomersPage  = lazy(() => import('../pages/admin/AdminCustomersPage'));
+const AdminReviewsPage    = lazy(() => import('../pages/admin/AdminReviewsPage'));
+const AdminAnalyticsPage  = lazy(() => import('../pages/admin/AdminAnalyticsPage'));
+const AdminSettingsPage   = lazy(() => import('../pages/admin/AdminSettingsPage'));
+
 const router = createBrowserRouter([
   {
     path: '/',
@@ -38,9 +50,8 @@ const router = createBrowserRouter([
       { path: 'wishlist',        element: <WishlistPage /> },
       { path: 'login',           element: <LoginPage /> },
       { path: 'register',        element: <RegisterPage /> },
-      { path: '*',               element: <NotFoundPage /> },
 
-      // ── Protected Routes ─────────────────────────────────────────────────
+      // ── Protected Customer Routes ──────────────────────────────────────────
       {
         element: <ProtectedRoute />,
         children: [
@@ -53,6 +64,30 @@ const router = createBrowserRouter([
       },
     ],
   },
+
+  // ── Secure Admin Panel Routes ─────────────────────────────────────────────
+  {
+    path: '/admin',
+    element: <AdminRoute />,
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        element: <AdminLayout />,
+        children: [
+          { index: true,             element: <AdminDashboard /> },
+          { path: 'products',        element: <AdminProductsPage /> },
+          { path: 'categories',      element: <AdminCategoriesPage /> },
+          { path: 'orders',          element: <AdminOrdersPage /> },
+          { path: 'customers',       element: <AdminCustomersPage /> },
+          { path: 'reviews',         element: <AdminReviewsPage /> },
+          { path: 'analytics',       element: <AdminAnalyticsPage /> },
+          { path: 'settings',        element: <AdminSettingsPage /> },
+        ],
+      },
+    ],
+  },
+
+  { path: '*', element: <NotFoundPage /> },
 ]);
 
 const AppRouter: React.FC = () => <RouterProvider router={router} />;

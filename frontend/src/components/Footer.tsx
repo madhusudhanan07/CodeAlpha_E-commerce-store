@@ -27,7 +27,7 @@ const Footer: React.FC = () => {
 
           {/* Brand column */}
           <div className="footer__col">
-            <p className="footer__brand-name">Code<span>Alpha</span></p>
+            <p className="footer__brand-name">NEWONE<span> SHOP</span></p>
             <p className="footer__tagline">
               A modern e-commerce experience built for speed, simplicity, and style.
             </p>
