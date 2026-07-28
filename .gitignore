@@ -7,9 +7,7 @@
 .env.test.local
 .env.production.local
 
-# Firebase Admin Service Account Key (NEVER commit — contains private key)
-*serviceAccountKey*.json
-backend/config/serviceAccountKey.json
+
 
 # Node modules
 node_modules/
