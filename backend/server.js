@@ -15,7 +15,7 @@ import app from './app.js';
 import { connectDB } from './config/db.js';
 
 const PORT = process.env.PORT || 5000;
-const HOST = process.env.HOST || 'localhost';
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Establish database connection before accepting traffic
 await connectDB();
