@@ -14,11 +14,8 @@
 
 -- ── 1. Database ───────────────────────────────────────────────────────────────
 
-CREATE DATABASE IF NOT EXISTS `codealpha_ecommerce`
-  CHARACTER SET utf8mb4
-  COLLATE      utf8mb4_unicode_ci;
 
-USE `codealpha_ecommerce`;
+USE `railway`;
 
 -- ── 2. Safety: Drop tables in reverse FK order ────────────────────────────────
 --    Allows re-running the script cleanly on an existing database.
