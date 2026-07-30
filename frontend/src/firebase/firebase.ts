@@ -10,7 +10,11 @@
  */
 
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import {
+  initializeAuth,
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
+} from 'firebase/auth';
 
 const cleanEnv = (val?: string) => {
   if (!val) return val;
@@ -42,7 +46,10 @@ let authInstance;
 
 try {
   appInstance = initializeApp(firebaseConfig);
-  authInstance = getAuth(appInstance);
+  authInstance = initializeAuth(appInstance, {
+    persistence: browserLocalPersistence,
+    popupRedirectResolver: browserPopupRedirectResolver,
+  });
 } catch (error) {
   console.error("🔥 Failed to initialize Firebase:", error);
   // Provide dummy objects to prevent 'Cannot read properties of undefined' crashes in React
