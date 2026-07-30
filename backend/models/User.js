@@ -75,7 +75,7 @@ export const findByEmail = async (email) => {
  */
 export const create = async ({ firebase_uid, full_name, email, phone = null }) => {
   const [result] = await pool.query(
-    'INSERT INTO users (firebase_uid, full_name, email, phone) VALUES (?, ?, ?, ?)',
+    'INSERT IGNORE INTO users (firebase_uid, full_name, email, phone) VALUES (?, ?, ?, ?)',
     [firebase_uid, full_name, email, phone],
   );
   return result;

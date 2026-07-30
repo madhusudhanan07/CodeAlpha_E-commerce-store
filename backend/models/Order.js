@@ -13,6 +13,8 @@
  *  - shipping_address is stored as JSON in MySQL 8 (native JSON column).
  *  - order_status and payment_status are ENUM columns.
  *  - ON DELETE RESTRICT on users.id — order history is preserved.
+ *  - payment_method column may not exist in older DB schemas; all queries
+ *    fall back gracefully if the column is missing (ER_BAD_FIELD_ERROR).
  */
 
 import pool from '../config/db.js';
@@ -29,15 +31,30 @@ export const PAYMENT_STATUS = Object.freeze(['Pending', 'Paid', 'Failed']);
  * @returns {Promise<Array>} Array of order rows
  */
 export const findByUserId = async (userId) => {
-  const [rows] = await pool.query(
-    `SELECT id, user_id, total_amount, order_status, payment_status,
-            payment_method, shipping_address, created_at
-     FROM orders
-     WHERE user_id = ?
-     ORDER BY created_at DESC`,
-    [userId],
-  );
-  return rows;
+  try {
+    const [rows] = await pool.query(
+      `SELECT id, user_id, total_amount, order_status, payment_status,
+              payment_method, shipping_address, created_at
+       FROM orders
+       WHERE user_id = ?
+       ORDER BY created_at DESC`,
+      [userId],
+    );
+    return rows;
+  } catch (err) {
+    if (err.code === 'ER_BAD_FIELD_ERROR') {
+      const [rows] = await pool.query(
+        `SELECT id, user_id, total_amount, order_status, payment_status,
+                shipping_address, created_at
+         FROM orders
+         WHERE user_id = ?
+         ORDER BY created_at DESC`,
+        [userId],
+      );
+      return rows;
+    }
+    throw err;
+  }
 };
 
 /**
@@ -46,13 +63,26 @@ export const findByUserId = async (userId) => {
  * @returns {Promise<Object|null>} Order row or null
  */
 export const findById = async (id) => {
-  const [rows] = await pool.query(
-    `SELECT id, user_id, total_amount, order_status, payment_status,
-            payment_method, shipping_address, created_at
-     FROM orders WHERE id = ? LIMIT 1`,
-    [id],
-  );
-  return rows[0] ?? null;
+  try {
+    const [rows] = await pool.query(
+      `SELECT id, user_id, total_amount, order_status, payment_status,
+              payment_method, shipping_address, created_at
+       FROM orders WHERE id = ? LIMIT 1`,
+      [id],
+    );
+    return rows[0] ?? null;
+  } catch (err) {
+    if (err.code === 'ER_BAD_FIELD_ERROR') {
+      const [rows] = await pool.query(
+        `SELECT id, user_id, total_amount, order_status, payment_status,
+                shipping_address, created_at
+         FROM orders WHERE id = ? LIMIT 1`,
+        [id],
+      );
+      return rows[0] ?? null;
+    }
+    throw err;
+  }
 };
 
 /**
@@ -63,19 +93,33 @@ export const findById = async (id) => {
  * @returns {Promise<Object|null>} Order row or null
  */
 export const findByIdAndUser = async (id, userId) => {
-  const [rows] = await pool.query(
-    `SELECT id, user_id, total_amount, order_status, payment_status,
-            payment_method, shipping_address, created_at
-     FROM orders WHERE id = ? AND user_id = ? LIMIT 1`,
-    [id, userId],
-  );
-  return rows[0] ?? null;
+  try {
+    const [rows] = await pool.query(
+      `SELECT id, user_id, total_amount, order_status, payment_status,
+              payment_method, shipping_address, created_at
+       FROM orders WHERE id = ? AND user_id = ? LIMIT 1`,
+      [id, userId],
+    );
+    return rows[0] ?? null;
+  } catch (err) {
+    if (err.code === 'ER_BAD_FIELD_ERROR') {
+      const [rows] = await pool.query(
+        `SELECT id, user_id, total_amount, order_status, payment_status,
+                shipping_address, created_at
+         FROM orders WHERE id = ? AND user_id = ? LIMIT 1`,
+        [id, userId],
+      );
+      return rows[0] ?? null;
+    }
+    throw err;
+  }
 };
 
 // ── CREATE ────────────────────────────────────────────────────────────────────
 
 /**
  * Insert a new order record.
+ * Falls back to omitting payment_method if the column doesn't exist yet.
  * @param {{
  *   user_id:          number,
  *   total_amount:     number,
@@ -95,12 +139,25 @@ export const create = async ({
   shipping_address = null,
 }) => {
   const addressJson = shipping_address ? JSON.stringify(shipping_address) : null;
-  const [result] = await pool.query(
-    `INSERT INTO orders (user_id, total_amount, order_status, payment_status, payment_method, shipping_address)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [user_id, total_amount, order_status, payment_status, payment_method, addressJson],
-  );
-  return result;
+  try {
+    const [result] = await pool.query(
+      `INSERT INTO orders (user_id, total_amount, order_status, payment_status, payment_method, shipping_address)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [user_id, total_amount, order_status, payment_status, payment_method, addressJson],
+    );
+    return result;
+  } catch (err) {
+    // Fallback: insert without payment_method if column doesn't exist yet in production DB
+    if (err.code === 'ER_BAD_FIELD_ERROR') {
+      const [result] = await pool.query(
+        `INSERT INTO orders (user_id, total_amount, order_status, payment_status, shipping_address)
+         VALUES (?, ?, ?, ?, ?)`,
+        [user_id, total_amount, order_status, payment_status, addressJson],
+      );
+      return result;
+    }
+    throw err;
+  }
 };
 
 // ── UPDATE ────────────────────────────────────────────────────────────────────
