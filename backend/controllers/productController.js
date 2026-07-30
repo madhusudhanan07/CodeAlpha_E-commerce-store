@@ -71,6 +71,8 @@ export const getAllProducts = async (req, res, next) => {
   }
 };
 
+export const getProducts = getAllProducts;
+
 // ── GET /api/products/featured ────────────────────────────────────────────────
 export const getFeaturedProducts = async (req, res, next) => {
   try {
