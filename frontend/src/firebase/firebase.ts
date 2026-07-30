@@ -22,5 +22,13 @@ const firebaseConfig = {
   measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
+if (!firebaseConfig.apiKey) {
+  console.error(
+    "🚨 FIREBASE CONFIG MISSING! 🚨\n" +
+    "Your Vercel deployment is missing the VITE_FIREBASE_API_KEY environment variable.\n" +
+    "Please go to your Vercel Dashboard -> Settings -> Environment Variables, and add all the variables from your local .env file."
+  );
+}
+
 export const app  = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
