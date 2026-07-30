@@ -7,6 +7,7 @@
 const allowedOrigins = [
   'http://localhost:5173', // Vite dev server (frontend)
   'http://localhost:3000', // Alternative local port
+  'https://new-ecommerce-store.vercel.app', // Vercel production frontend
 ];
 
 const corsOptions = {
