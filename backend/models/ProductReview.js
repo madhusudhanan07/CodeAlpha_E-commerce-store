@@ -9,10 +9,10 @@ import pool from '../config/db.js';
 // Ensure table schema matches specs at runtime
 const ensureTable = async () => {
   try {
-    // Check if column user_id exists in product_reviews
-    const [cols] = await pool.query(`SHOW COLUMNS FROM product_reviews LIKE 'user_id'`);
+    // Check if column 'review' exists in product_reviews
+    const [cols] = await pool.query(`SHOW COLUMNS FROM product_reviews LIKE 'review'`);
     if (cols.length === 0) {
-      // Drop old incompatible table if present
+      // Re-create table if 'review' column is missing in old schema
       await pool.query('SET FOREIGN_KEY_CHECKS = 0');
       await pool.query('DROP TABLE IF EXISTS product_reviews');
       await pool.query('SET FOREIGN_KEY_CHECKS = 1');
@@ -21,14 +21,14 @@ const ensureTable = async () => {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS product_reviews (
         id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-        product_id         BIGINT UNSIGNED NOT NULL,
-        user_id            BIGINT UNSIGNED NOT NULL,
+        product_id        BIGINT UNSIGNED NOT NULL,
+        user_id           BIGINT UNSIGNED NOT NULL,
         rating            INT             NOT NULL DEFAULT 5,
         title             VARCHAR(255)    NOT NULL,
         review            TEXT            NOT NULL,
         verified_purchase TINYINT(1)      NOT NULL DEFAULT 1,
-        created_at         DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at         DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        created_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         UNIQUE KEY uq_reviews_product_user (product_id, user_id),
         INDEX idx_reviews_product_id (product_id),
