@@ -42,7 +42,7 @@ const ensureTable = async () => {
   }
 };
 
-ensureTable();
+//ensureTable();
 
 /**
  * Fetch all reviews for a product with user details joined.

@@ -1,61 +1,27 @@
 /**
- * productRoutes.js — Product API Routes with Recommendation Engine
+ * server.js — HTTP Server Entry Point
  *
- * Mount point: /api/products  (registered in app.js)
+ * Responsibilities:
+ *  1. Load environment variables
+ *  2. Verify database connectivity
+ *  3. Create the HTTP server and begin listening
+ *
+ * This file intentionally contains NO middleware or business logic.
+ * All application configuration lives in app.js.
  */
 
-import { Router } from 'express';
-import {
-  getAllProducts,
-  getFeaturedProducts,
-  getProductsByCategory,
-  getProductById,
-  getProductBySlug,
-  getProductGallery,
-  getProductSpecifications,
-} from '../controllers/productController.js';
-import {
-  getProductReviews,
-  addProductReview,
-} from '../controllers/reviewController.js';
-import {
-  getRelatedProducts,
-  getFrequentlyBought,
-  getRecentlyViewed,
-  recordRecentlyViewed,
-  getRecommended,
-  getBestSellers,
-  getTrending,
-} from '../controllers/recommendationController.js';
-import verifyFirebaseToken from '../middleware/verifyFirebaseToken.js';
+import 'dotenv/config';
+import app from './app.js';
+import { connectDB } from './config/db.js';
 
-const router = Router();
+const PORT = process.env.PORT || 5000;
+const HOST = process.env.HOST || '0.0.0.0';
 
-// ── Specific static routes (must come BEFORE /:id) ───────────────────────────
-router.get('/featured',           getFeaturedProducts);
-router.get('/category/:category', getProductsByCategory);
-router.get('/slug/:slug',         getProductBySlug);
+// Establish database connection before accepting traffic
+await connectDB();
 
-// Recommendation Collection Routes
-router.get('/recently-viewed',    getRecentlyViewed);
-router.post('/recently-viewed',   recordRecentlyViewed);
-router.get('/recommended',        getRecommended);
-router.get('/best-sellers',       getBestSellers);
-router.get('/trending',           getTrending);
-
-// ── Sub-resource routes ───────────────────────────────────────────────────────
-router.get('/:id/gallery',           getProductGallery);
-router.get('/:id/images',            getProductGallery);
-router.get('/:id/specifications',    getProductSpecifications);
-router.get('/:id/reviews',           getProductReviews);
-router.get('/:id/related',           getRelatedProducts);
-router.get('/:id/frequently-bought', getFrequentlyBought);
-
-// Write review (requires Firebase authentication)
-router.post('/:id/reviews', verifyFirebaseToken, addProductReview);
-
-// ── Collection & single-by-ID ─────────────────────────────────────────────────
-router.get('/',    getAllProducts);
-router.get('/:id', getProductById);
-
-export default router;
+app.listen(PORT, HOST, () => {
+  console.log(`\n🚀 Server running at http://${HOST}:${PORT}`);
+  console.log(`📦 Environment : ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔹 API root    : http://${HOST}:${PORT}/\n`);
+});
