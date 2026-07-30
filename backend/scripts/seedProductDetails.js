@@ -124,6 +124,9 @@ const SAMPLE_REVIEWS = [
 ];
 
 export const seedProductDetails = async () => {
+  // Completely disable execution during app/server startup
+  return;
+
   try {
     const [products] = await pool.query('SELECT id, name, slug, price, category_id FROM products');
     if (!products || products.length === 0) return;
@@ -144,14 +147,16 @@ export const seedProductDetails = async () => {
       const existingReviews = await ProductReviewModel.findByProductId(product.id);
       if (existingReviews.length < 5) {
         await pool.query('DELETE FROM product_reviews WHERE product_id = ?', [product.id]);
-        const reviewsToInsert = SAMPLE_REVIEWS.map((rev) => ({
-          user_name: rev.name,
-          user_avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(rev.name)}&background=6c63ff&color=fff`,
-          rating: rev.rating,
-          review: rev.comment,
-          verified_purchase: true,
-        }));
-        await ProductReviewModel.bulkCreate(product.id, reviewsToInsert);
+        for (const rev of SAMPLE_REVIEWS) {
+          await ProductReviewModel.create({
+            product_id: product.id,
+            user_id: 1, // Fallback default user ID
+            rating: rev.rating,
+            title: 'Great Product',
+            review: rev.comment,
+            verified_purchase: true,
+          });
+        }
       }
     }
   } catch (err) {
