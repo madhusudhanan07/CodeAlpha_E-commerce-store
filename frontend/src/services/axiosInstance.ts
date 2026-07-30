@@ -13,12 +13,19 @@
 import axios from 'axios';
 import { auth } from '../firebase/firebase';
 
+// Use env var if set, otherwise fall back to Render in production and localhost in dev
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD
+    ? 'https://codealpha-backend-tfvk.onrender.com'
+    : 'http://localhost:5000');
+
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10_000, // 10 seconds
+  timeout: 15_000, // 15 seconds (Render free tier can be slow to wake up)
 });
 
 // ── Request Interceptor ───────────────────────────────────────────────────────
