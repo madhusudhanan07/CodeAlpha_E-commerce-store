@@ -5,15 +5,20 @@
  */
 
 const allowedOrigins = [
-  'http://localhost:5173', // Vite dev server (frontend)
-  'http://localhost:3000', // Alternative local port
-  'https://new-ecommerce-store.vercel.app', // Vercel production frontend
+  'http://localhost:5173',                        // Vite dev server (frontend)
+  'http://localhost:3000',                        // Alternative local port
+  'https://new-ecommerce-store.vercel.app',       // Vercel production frontend
 ];
 
 const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (e.g. curl, Postman, mobile apps)
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Also allow all vercel.app subdomains and any explicitly listed origin
+    if (
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      /\.vercel\.app$/.test(origin)
+    ) {
       callback(null, true);
     } else {
       callback(new Error(`CORS policy: origin '${origin}' is not allowed.`));
