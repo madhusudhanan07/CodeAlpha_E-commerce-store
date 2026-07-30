@@ -1,15 +1,9 @@
-import 'dotenv/config';
-import app from '../app.js';
-import { connectDB } from './config/db.js';
+import express from 'express';
+import { getProducts, getProductById } from '../controllers/productController.js';
 
-const PORT = process.env.PORT || 5000;
-const HOST = process.env.HOST || '0.0.0.0';
+const router = express.Router();
 
-// Establish database connection before accepting traffic
-await connectDB();
+router.get('/', getProducts);
+router.get('/:id', getProductById);
 
-app.listen(PORT, HOST, () => {
-  console.log(`\n🚀 Server running at http://${HOST}:${PORT}`);
-  console.log(`📦 Environment : ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔹 API root    : http://${HOST}:${PORT}/\n`);
-});
+export default router;
