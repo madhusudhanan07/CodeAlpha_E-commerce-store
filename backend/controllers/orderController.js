@@ -128,27 +128,55 @@ export const placeOrder = async (req, res, next) => {
     await connection.beginTransaction();
 
     try {
-      // 6a. Create order
-      const [orderResult] = await connection.query(
-        `INSERT INTO orders (user_id, total_amount, order_status, payment_status, payment_method, shipping_address)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-          userId,
-          grandTotal,
-          'Processing',
-          payment_method === 'Cash on Delivery' ? 'Pending' : 'Paid',
-          payment_method,
-          JSON.stringify({
-            ...shipping_address,
-            delivery_method,
-            coupon_code,
-            subtotal,
-            tax,
-            shipping_fee: deliveryCharge,
-            discount,
-          }),
-        ],
-      );
+      // 6a. Create order (with payment_method fallback for older DB schemas)
+      let orderResult;
+      try {
+        [orderResult] = await connection.query(
+          `INSERT INTO orders (user_id, total_amount, order_status, payment_status, payment_method, shipping_address)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            userId,
+            grandTotal,
+            'Processing',
+            payment_method === 'Cash on Delivery' ? 'Pending' : 'Paid',
+            payment_method,
+            JSON.stringify({
+              ...shipping_address,
+              delivery_method,
+              coupon_code,
+              subtotal,
+              tax,
+              shipping_fee: deliveryCharge,
+              discount,
+            }),
+          ],
+        );
+      } catch (colErr) {
+        if (colErr.code === 'ER_BAD_FIELD_ERROR') {
+          // payment_method column doesn't exist yet — insert without it
+          [orderResult] = await connection.query(
+            `INSERT INTO orders (user_id, total_amount, order_status, payment_status, shipping_address)
+             VALUES (?, ?, ?, ?, ?)`,
+            [
+              userId,
+              grandTotal,
+              'Processing',
+              payment_method === 'Cash on Delivery' ? 'Pending' : 'Paid',
+              JSON.stringify({
+                ...shipping_address,
+                delivery_method,
+                coupon_code,
+                subtotal,
+                tax,
+                shipping_fee: deliveryCharge,
+                discount,
+              }),
+            ],
+          );
+        } else {
+          throw colErr;
+        }
+      }
 
       const orderId = orderResult.insertId;
 

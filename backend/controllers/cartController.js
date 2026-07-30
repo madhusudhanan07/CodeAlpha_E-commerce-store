@@ -21,9 +21,14 @@ const resolveUserId = async (decodedUser) => {
       full_name: fullName,
       email: email,
     });
-    user = { id: result.insertId };
+    // INSERT IGNORE returns insertId=0 when user already exists — re-fetch
+    if (result.insertId) {
+      user = { id: result.insertId };
+    } else {
+      user = await UserModel.findByFirebaseUid(decodedUser.uid);
+    }
   }
-  return user.id;
+  return user?.id || null;
 };
 
 // ── GET /api/cart ────────────────────────────────────────────────────────────
