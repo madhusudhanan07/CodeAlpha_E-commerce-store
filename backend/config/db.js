@@ -35,7 +35,8 @@ export const connectDB = async () => {
     connection.release();
   } catch (error) {
     console.error('❌ MySQL connection failed:', error.message);
-    process.exit(1);
+    console.warn('⚠️ Server is running, but database-dependent routes will fail. Please configure DB_HOST, DB_USER, DB_PASSWORD, and DB_NAME in your environment.');
+    // Removed process.exit(1) to prevent deployment crashes on PaaS like Render
   }
 };
 
