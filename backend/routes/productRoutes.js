@@ -1,17 +1,5 @@
-/**
- * server.js — HTTP Server Entry Point
- *
- * Responsibilities:
- *  1. Load environment variables
- *  2. Verify database connectivity
- *  3. Create the HTTP server and begin listening
- *
- * This file intentionally contains NO middleware or business logic.
- * All application configuration lives in app.js.
- */
-
 import 'dotenv/config';
-import app from '../app.js';
+import app from './app.js'; // ✅ Corrected (./ instead of ../)
 import { connectDB } from './config/db.js';
 
 const PORT = process.env.PORT || 5000;
