@@ -16,17 +16,17 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   return (
     <div className={`brand-logo-container ${className}`} style={{ display: 'inline-flex', alignItems: 'center' }}>
       <svg
-        viewBox="0 0 220 185"
+        viewBox="0 0 230 195"
         style={{ height, width: 'auto', maxHeight: '100%' }}
         aria-label="NEW ONE E-Commerce Shop Logo"
       >
         <g fill={color}>
           {/* Top arrow above E in NEW */}
-          <path d="M102 36 L110 20 L118 36 H113 V48 H107 V36 Z" fill={color} />
+          <path d="M107 36 L115 20 L123 36 H118 V48 H112 V36 Z" fill={color} />
           
           {/* Word 1: NEW */}
           <text
-            x="110"
+            x="115"
             y="95"
             textAnchor="middle"
             fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
@@ -40,7 +40,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
           
           {/* Word 2: ONE */}
           <text
-            x="110"
+            x="115"
             y="148"
             textAnchor="middle"
             fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
@@ -52,16 +52,16 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             ONE
           </text>
           
-          {/* Tagline: E-COMMERCE SHOP */}
+          {/* Subtitle / Tagline: E-COMMERCE SHOP (Maximised Size) */}
           {showTagline && (
             <text
-              x="110"
-              y="174"
+              x="115"
+              y="182"
               textAnchor="middle"
               fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-              fontWeight="700"
-              fontSize="11"
-              letterSpacing="3.5"
+              fontWeight="900"
+              fontSize="21"
+              letterSpacing="1.5"
               fill={color}
             >
               E-COMMERCE SHOP

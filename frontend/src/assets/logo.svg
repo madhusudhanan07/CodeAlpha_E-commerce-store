@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 195" width="100%" height="100%">
+  <g fill="currentColor" stroke="none">
+    <!-- Arrow pointing up from top of E -->
+    <path d="M107 36 L115 20 L123 36 H118 V48 H112 V36 Z" fill="currentColor"/>
+    
+    <!-- Top Row: NEW -->
+    <text x="115" y="95" text-anchor="middle" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="58" letter-spacing="3" fill="currentColor">NEW</text>
+    
+    <!-- Bottom Row: ONE -->
+    <text x="115" y="148" text-anchor="middle" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="58" letter-spacing="3" fill="currentColor">ONE</text>
+    
+    <!-- Tagline: E-COMMERCE SHOP -->
+    <text x="115" y="182" text-anchor="middle" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="21" letter-spacing="1.5" fill="currentColor">E-COMMERCE SHOP</text>
+  </g>
+</svg>
