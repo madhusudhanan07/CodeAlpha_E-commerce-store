@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { Search, Heart, ShoppingBag, LogOut, Shield } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
 import '../styles/Navbar.css';
 
 export const Navbar: React.FC = () => {
@@ -72,13 +73,8 @@ export const Navbar: React.FC = () => {
       <div className="navbar-container container">
 
         {/* ── Brand Logo ─────────────────────────────────── */}
-        <Link to="/" className="navbar-logo" onClick={closeMenu}>
-          <div className="logo-icon-box">
-            <ShoppingBag className="w-5 h-5 text-white" />
-          </div>
-          <span className="logo-text">
-            NEWONE<span className="logo-text-accent"> SHOP</span>
-          </span>
+        <Link to="/" className="navbar-logo" onClick={closeMenu} aria-label="NEW ONE E-Commerce Shop">
+          <BrandLogo height={68} color="#173f15" />
         </Link>
 
         {/* ── Center Rounded Search Bar ───────────────────── */}

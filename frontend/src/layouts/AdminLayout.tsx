@@ -11,6 +11,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { BrandLogo } from '../components/BrandLogo';
 import {
   LayoutDashboard,
   Package,
@@ -160,16 +161,8 @@ export const AdminLayout: React.FC = () => {
         
         {/* Brand Header */}
         <div className="admin-sidebar-header">
-          <NavLink to="/admin" className="admin-logo-group">
-            <div className="admin-logo-badge">
-              <ShoppingBag className="w-5 h-5 text-white" />
-            </div>
-            {!isCollapsed && (
-              <div className="admin-logo-title-group">
-                <div className="admin-logo-title">NEWONE SHOP</div>
-                <div className="admin-logo-subtitle">Admin Workspace</div>
-              </div>
-            )}
+          <NavLink to="/admin" className="admin-logo-group" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+            <BrandLogo height={isCollapsed ? 36 : 42} color="#ffffff" showTagline={!isCollapsed} />
           </NavLink>
 
           <button

@@ -13,6 +13,7 @@
  */
 
 import { Link } from 'react-router-dom';
+import { BrandLogo } from './BrandLogo';
 import '../styles/Footer.css';
 
 const Footer: React.FC = () => {
@@ -27,7 +28,9 @@ const Footer: React.FC = () => {
 
           {/* Brand column */}
           <div className="footer__col">
-            <p className="footer__brand-name">NEWONE<span> SHOP</span></p>
+            <Link to="/" className="footer__brand-logo" aria-label="NEW ONE E-Commerce Shop">
+              <BrandLogo height={58} color="#4ade80" />
+            </Link>
             <p className="footer__tagline">
               A modern e-commerce experience built for speed, simplicity, and style.
             </p>
