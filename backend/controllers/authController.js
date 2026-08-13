@@ -1,7 +1,7 @@
 /**
- * authController.js — Authentication Business Logic
+ * authController.js — Authentication Business Logic (Firestore)
  *
- * Handles user registration (upsert to MySQL) and profile retrieval.
+ * Handles user registration (upsert to Firestore) and profile retrieval.
  * All routes are Firebase-protected via verifyFirebaseToken middleware.
  */
 
@@ -9,14 +9,14 @@ import * as UserModel from '../models/User.js';
 
 // ── POST /api/auth/register ───────────────────────────────────────────────────
 /**
- * Registers (or returns) a user in MySQL after Firebase account creation.
+ * Registers (or returns) a user in Firestore after Firebase account creation.
  *
  * Request body: { name, email, firebaseUid }
  * Attached by middleware: req.decodedUser (verified Firebase token payload)
  *
  * Behaviour:
  *  - If firebase_uid already exists → return the existing user (idempotent)
- *  - Otherwise → insert a new user row and return it
+ *  - Otherwise → upsert a new user document and return it
  */
 export const registerUser = async (req, res, next) => {
   try {
@@ -40,9 +40,9 @@ export const registerUser = async (req, res, next) => {
       });
     }
 
-    // Insert new user
-    const result   = await UserModel.create({ firebase_uid: firebaseUid, full_name: name, email });
-    const newUser  = await UserModel.findById(result.insertId);
+    // Upsert new user (doc ID = firebaseUid)
+    await UserModel.create({ firebase_uid: firebaseUid, full_name: name, email });
+    const newUser = await UserModel.findByFirebaseUid(firebaseUid);
 
     return res.status(201).json({
       success: true,
@@ -56,7 +56,7 @@ export const registerUser = async (req, res, next) => {
 
 // ── POST /api/auth/profile ────────────────────────────────────────────────────
 /**
- * Returns the full MySQL profile for the currently authenticated user.
+ * Returns the full Firestore profile for the currently authenticated user.
  * Relies on req.decodedUser.uid set by verifyFirebaseToken.
  */
 export const getProfile = async (req, res, next) => {
@@ -84,7 +84,7 @@ export const getProfile = async (req, res, next) => {
 // ── GET /api/auth/me ──────────────────────────────────────────────────────────
 /**
  * Returns the authenticated Firebase token payload (lightweight endpoint).
- * Does NOT query MySQL — useful for quick identity checks.
+ * Does NOT query Firestore — useful for quick identity checks.
  */
 export const getMe = async (req, res) => {
   const { uid, email, name, email_verified } = req.decodedUser;

@@ -1,57 +1,50 @@
 /**
- * ProductGallery.js — Product Gallery Image Model
+ * ProductGallery.js — Product Gallery Image Model (Firestore)
  *
- * Interacts with the `product_gallery` table in MySQL.
+ * Gallery images are stored as an `images[]` array embedded in each product document.
+ * This model provides a compatibility shim so productController works unchanged.
  */
 
-import pool from '../config/db.js';
+import db from '../config/db.js';
 
-// Ensure table exists at runtime
-const ensureTable = async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS product_gallery (
-        id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-        product_id    BIGINT UNSIGNED NOT NULL,
-        image_url     VARCHAR(500)    NOT NULL,
-        display_order INT             NOT NULL DEFAULT 0,
-        created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (id),
-        INDEX idx_gallery_product_id (product_id),
-        CONSTRAINT fk_gallery_product FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-  } catch (err) {
-    console.error('Error ensuring product_gallery table:', err.message);
-  }
-};
-
-ensureTable();
+const COL = 'products';
 
 /**
- * Fetch all gallery images for a given product ID, ordered by display_order.
- * @param {number} productId
- * @returns {Promise<Array>} Array of gallery image rows
+ * Fetch all gallery images for a given product ID.
+ * @param {string|number} productId
+ * @returns {Promise<Array>}
  */
 export const findByProductId = async (productId) => {
-  const [rows] = await pool.query(
-    'SELECT id, product_id, image_url, display_order, created_at FROM product_gallery WHERE product_id = ? ORDER BY display_order ASC, id ASC',
-    [productId],
-  );
-  return rows;
+  const doc = await db.collection(COL).doc(String(productId)).get();
+  if (!doc.exists) return [];
+
+  const data = doc.data();
+  const images = data.images ?? [];
+
+  // Return in the same shape as the MySQL version
+  return images.map((img, idx) => ({
+    id: idx + 1,
+    product_id: productId,
+    image_url: typeof img === 'string' ? img : img.image_url,
+    display_order: typeof img === 'string' ? idx : (img.display_order ?? idx),
+    created_at: data.created_at ?? null,
+  }));
 };
 
 /**
- * Bulk insert gallery images for a product.
- * @param {number} productId
+ * Bulk insert gallery images for a product (stored in product document).
+ * @param {string|number} productId
  * @param {Array<{ image_url: string, display_order?: number }>} items
+ * @returns {Promise<Object>} { affectedRows: items.length }
  */
 export const bulkCreate = async (productId, items) => {
   if (!items || items.length === 0) return { affectedRows: 0 };
-  const values = items.map((item, idx) => [productId, item.image_url, item.display_order ?? idx]);
-  const [result] = await pool.query(
-    'INSERT INTO product_gallery (product_id, image_url, display_order) VALUES ?',
-    [values],
-  );
-  return result;
+
+  const images = items.map((item, idx) => ({
+    image_url: item.image_url,
+    display_order: item.display_order ?? idx,
+  }));
+
+  await db.collection(COL).doc(String(productId)).update({ images });
+  return { affectedRows: items.length };
 };

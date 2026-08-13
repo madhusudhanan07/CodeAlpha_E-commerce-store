@@ -1,227 +1,287 @@
 /**
- * Product.js — Product Model
+ * Product.js — Product Model (Firestore)
  *
- * Provides reusable, parameterised query functions for the `products` table.
- * Uses the existing MySQL connection pool from config/db.js.
+ * Provides reusable query functions for the `products` Firestore collection.
+ * Preserves the exact same exported function signatures as the MySQL version.
  *
- * Responsibilities:
- *  - Full CRUD for the product catalogue
- *  - Filtering by category, featured flag, price range, and search term
- *  - No business logic, no HTTP handling, no routing
+ * Gallery images and specifications are embedded in each product document
+ * as `images[]` and `specifications[]` arrays respectively.
  */
 
-import pool from '../config/db.js';
+import db from '../config/db.js';
 
-// ── Base SELECT fragment (avoids repeating column list) ───────────────────────
-const SELECT_COLS = `
-  p.id,
-  p.category_id,
-  c.name  AS category_name,
-  c.slug  AS category_slug,
-  p.name,
-  p.slug,
-  p.description,
-  p.image_url,
-  p.price,
-  p.stock,
-  p.is_featured,
-  p.created_at,
-  p.updated_at
-`;
+const COL = 'products';
 
-const FROM_JOIN = `
-  FROM products p
-  INNER JOIN categories c ON c.id = p.category_id
-`;
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const docToRow = (doc) => {
+  const data = doc.data();
+  return {
+    id: data.id ?? doc.id,
+    category_id: data.category_id ?? null,
+    category_name: data.category_name ?? null,
+    category_slug: data.category_slug ?? null,
+    name: data.name,
+    slug: data.slug,
+    description: data.description ?? null,
+    image_url: data.image_url ?? null,
+    price: Number(data.price ?? 0),
+    stock: Number(data.stock ?? 0),
+    is_featured: data.is_featured ? 1 : 0,
+    brand: data.brand ?? 'Generic',
+    sku: data.sku ?? null,
+    old_price: data.old_price ?? null,
+    discount_pct: data.discount_pct ?? 0,
+    specifications: data.specifications ?? [],
+    images: data.images ?? [],
+    tags: data.tags ?? null,
+    weight: data.weight ?? null,
+    dimensions: data.dimensions ?? null,
+    warranty: data.warranty ?? null,
+    return_policy: data.return_policy ?? null,
+    shipping_info: data.shipping_info ?? null,
+    is_active: data.is_active !== false,
+    created_at: data.created_at ?? null,
+    updated_at: data.updated_at ?? null,
+  };
+};
 
 // ── READ ──────────────────────────────────────────────────────────────────────
 
 /**
- * Fetch all products with their category name.
- * @returns {Promise<Array>} Array of product rows
+ * Fetch all products ordered by created_at DESC.
+ * @returns {Promise<Array>}
  */
 export const findAll = async () => {
-  const [rows] = await pool.query(
-    `SELECT ${SELECT_COLS} ${FROM_JOIN} ORDER BY p.created_at DESC`,
-  );
-  return rows;
+  const snap = await db.collection(COL).orderBy('created_at', 'desc').get();
+  return snap.docs.map(docToRow);
 };
 
 /**
- * Find a single product by its internal ID.
- * @param {number} id
- * @returns {Promise<Object|null>} Product row or null
+ * Find a single product by its document ID.
+ * @param {string|number} id
+ * @returns {Promise<Object|null>}
  */
 export const findById = async (id) => {
-  const [rows] = await pool.query(
-    `SELECT ${SELECT_COLS} ${FROM_JOIN} WHERE p.id = ? LIMIT 1`,
-    [id],
-  );
-  return rows[0] ?? null;
+  const doc = await db.collection(COL).doc(String(id)).get();
+  return doc.exists ? docToRow(doc) : null;
 };
 
 /**
  * Find a product by its URL slug.
  * @param {string} slug
- * @returns {Promise<Object|null>} Product row or null
+ * @returns {Promise<Object|null>}
  */
 export const findBySlug = async (slug) => {
-  const [rows] = await pool.query(
-    `SELECT ${SELECT_COLS} ${FROM_JOIN} WHERE p.slug = ? LIMIT 1`,
-    [slug],
-  );
-  return rows[0] ?? null;
+  const snap = await db.collection(COL).where('slug', '==', slug).limit(1).get();
+  if (snap.empty) return null;
+  return docToRow(snap.docs[0]);
 };
 
 /**
- * Fetch all products in a given category.
- * @param {number} categoryId
- * @returns {Promise<Array>} Array of product rows
+ * Fetch all products in a given category by category ID.
+ * Filters client-side to avoid requiring composite index.
+ * @param {string|number} categoryId
+ * @returns {Promise<Array>}
  */
 export const findByCategoryId = async (categoryId) => {
-  const [rows] = await pool.query(
-    `SELECT ${SELECT_COLS} ${FROM_JOIN} WHERE p.category_id = ? ORDER BY p.name ASC`,
-    [categoryId],
-  );
-  return rows;
+  const snap = await db.collection(COL)
+    .where('category_id', '==', String(categoryId))
+    .get();
+  return snap.docs.map(docToRow).sort((a, b) => a.name.localeCompare(b.name));
 };
 
 /**
- * Fetch all products with is_featured = 1 (for homepage display).
- * @returns {Promise<Array>} Array of featured product rows
+ * Fetch all products with is_featured = true.
+ * Uses client-side filter to avoid requiring a Firestore composite index.
+ * @returns {Promise<Array>}
  */
 export const findFeatured = async () => {
-  const [rows] = await pool.query(
-    `SELECT ${SELECT_COLS} ${FROM_JOIN} WHERE p.is_featured = 1 ORDER BY p.created_at DESC`,
-  );
-  return rows;
+  const snap = await db.collection(COL).get();
+  return snap.docs
+    .map(docToRow)
+    .filter((p) => p.is_featured)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 };
 
 /**
- * Full-text style search on product name and description.
- * Uses LIKE for now — can be upgraded to FULLTEXT index in a future phase.
- * @param {string} term  - Search term
- * @returns {Promise<Array>} Matching product rows
+ * Search products by name or description (case-insensitive prefix match via client-side filter).
+ * Firestore doesn't support native LIKE — we fetch all and filter in JS.
+ * For large catalogs, consider Algolia; for this scale it's fine.
+ * @param {string} term
+ * @returns {Promise<Array>}
  */
 export const search = async (term) => {
-  const pattern = `%${term}%`;
-  const [rows] = await pool.query(
-    `SELECT ${SELECT_COLS} ${FROM_JOIN}
-     WHERE p.name LIKE ? OR p.description LIKE ?
-     ORDER BY p.name ASC`,
-    [pattern, pattern],
-  );
-  return rows;
+  const lower = term.toLowerCase();
+  const snap = await db.collection(COL).get();
+  return snap.docs
+    .map(docToRow)
+    .filter(
+      (p) =>
+        p.name?.toLowerCase().includes(lower) ||
+        p.description?.toLowerCase().includes(lower),
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
 };
 
 // ── CREATE ────────────────────────────────────────────────────────────────────
 
 /**
  * Insert a new product.
- * @param {{
- *   category_id: number,
- *   name: string,
- *   slug: string,
- *   description?: string,
- *   image_url?: string,
- *   price: number,
- *   stock?: number,
- *   is_featured?: number
- * }} data
- * @returns {Promise<Object>} mysql2 OkPacket (insertId available)
+ * @param {{ category_id, name, slug, description, image_url, price, stock, is_featured, ... }} data
+ * @returns {Promise<Object>} { insertId: newId }
  */
 export const create = async ({
   category_id,
   name,
   slug,
-  description = null,
-  image_url   = null,
+  description    = null,
+  image_url      = null,
   price,
-  stock       = 0,
-  is_featured = 0,
+  stock          = 0,
+  is_featured    = 0,
+  brand          = 'Generic',
+  sku            = null,
+  old_price      = null,
+  discount_pct   = 0,
+  specifications = [],
+  images         = [],
+  tags           = null,
+  weight         = null,
+  dimensions     = null,
+  warranty       = null,
+  return_policy  = null,
+  shipping_info  = null,
+  is_active      = true,
+  category_name  = null,
+  category_slug  = null,
 }) => {
-  const [result] = await pool.query(
-    `INSERT INTO products
-      (category_id, name, slug, description, image_url, price, stock, is_featured)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [category_id, name, slug, description, image_url, price, stock, is_featured],
-  );
-  return result;
+  // Resolve category info if not provided
+  if (!category_name && category_id) {
+    const catDoc = await db.collection('categories').doc(String(category_id)).get();
+    if (catDoc.exists) {
+      const cat = catDoc.data();
+      category_name = cat.name;
+      category_slug = cat.slug;
+    }
+  }
+
+  const snap = await db.collection(COL).get();
+  const newId = String(snap.size + 1);
+  const now = new Date().toISOString();
+
+  const productData = {
+    id: newId,
+    category_id: String(category_id),
+    category_name,
+    category_slug,
+    name,
+    slug,
+    description,
+    image_url,
+    price: Number(price),
+    stock: Number(stock),
+    is_featured: Boolean(is_featured),
+    brand,
+    sku,
+    old_price: old_price ? Number(old_price) : null,
+    discount_pct: Number(discount_pct),
+    specifications,
+    images,
+    tags,
+    weight,
+    dimensions,
+    warranty,
+    return_policy,
+    shipping_info,
+    is_active: Boolean(is_active),
+    created_at: now,
+    updated_at: now,
+  };
+
+  await db.collection(COL).doc(newId).set(productData);
+  return { insertId: newId };
 };
 
 // ── UPDATE ────────────────────────────────────────────────────────────────────
 
 /**
  * Update a product by ID. Only provided fields are changed.
- * @param {number} id
- * @param {{
- *   category_id?: number,
- *   name?: string,
- *   slug?: string,
- *   description?: string,
- *   image_url?: string,
- *   price?: number,
- *   stock?: number,
- *   is_featured?: number
- * }} fields
- * @returns {Promise<Object>} mysql2 OkPacket
+ * @param {string|number} id
+ * @param {Object} fields
+ * @returns {Promise<Object>} { affectedRows: 1 }
  */
 export const updateById = async (id, fields) => {
-  const {
-    category_id, name, slug, description,
-    image_url, price, stock, is_featured,
-  } = fields;
+  const updateData = { updated_at: new Date().toISOString() };
+  const allowed = [
+    'category_id', 'name', 'slug', 'description', 'image_url',
+    'price', 'stock', 'is_featured', 'brand', 'sku', 'old_price',
+    'discount_pct', 'specifications', 'images', 'tags', 'weight',
+    'dimensions', 'warranty', 'return_policy', 'shipping_info', 'is_active',
+    'category_name', 'category_slug',
+  ];
 
-  const [result] = await pool.query(
-    `UPDATE products SET
-       category_id = COALESCE(?, category_id),
-       name        = COALESCE(?, name),
-       slug        = COALESCE(?, slug),
-       description = COALESCE(?, description),
-       image_url   = COALESCE(?, image_url),
-       price       = COALESCE(?, price),
-       stock       = COALESCE(?, stock),
-       is_featured = COALESCE(?, is_featured)
-     WHERE id = ?`,
-    [
-      category_id ?? null,
-      name        ?? null,
-      slug        ?? null,
-      description ?? null,
-      image_url   ?? null,
-      price       ?? null,
-      stock       ?? null,
-      is_featured ?? null,
-      id,
-    ],
-  );
-  return result;
+  for (const key of allowed) {
+    if (fields[key] !== undefined && fields[key] !== null) {
+      updateData[key] = fields[key];
+    }
+  }
+
+  // Resolve category details if category_id changed
+  if (fields.category_id) {
+    const catDoc = await db.collection('categories').doc(String(fields.category_id)).get();
+    if (catDoc.exists) {
+      const cat = catDoc.data();
+      updateData.category_name = cat.name;
+      updateData.category_slug = cat.slug;
+    }
+    updateData.category_id = String(fields.category_id);
+  }
+
+  await db.collection(COL).doc(String(id)).update(updateData);
+  return { affectedRows: 1 };
 };
 
 /**
  * Decrement stock for a product. Prevents going below zero.
- * @param {number} id       - Product ID
- * @param {number} quantity - Units to deduct
- * @returns {Promise<Object>} mysql2 OkPacket
+ * @param {string|number} id
+ * @param {number} quantity
+ * @returns {Promise<Object>} { affectedRows: 1 }
  */
 export const decrementStock = async (id, quantity) => {
-  const [result] = await pool.query(
-    'UPDATE products SET stock = GREATEST(stock - ?, 0) WHERE id = ?',
-    [quantity, id],
-  );
-  return result;
+  const doc = await db.collection(COL).doc(String(id)).get();
+  if (!doc.exists) return { affectedRows: 0 };
+  const currentStock = Number(doc.data().stock ?? 0);
+  const newStock = Math.max(currentStock - quantity, 0);
+  await db.collection(COL).doc(String(id)).update({ stock: newStock, updated_at: new Date().toISOString() });
+  return { affectedRows: 1 };
+};
+
+/**
+ * Increment stock for a product (used during order cancellation).
+ * @param {string|number} id
+ * @param {number} quantity
+ * @returns {Promise<Object>} { affectedRows: 1 }
+ */
+export const incrementStock = async (id, quantity) => {
+  const doc = await db.collection(COL).doc(String(id)).get();
+  if (!doc.exists) return { affectedRows: 0 };
+  const currentStock = Number(doc.data().stock ?? 0);
+  await db.collection(COL).doc(String(id)).update({
+    stock: currentStock + quantity,
+    updated_at: new Date().toISOString(),
+  });
+  return { affectedRows: 1 };
 };
 
 // ── DELETE ────────────────────────────────────────────────────────────────────
 
 /**
  * Delete a product by ID.
- * Note: FK `fk_order_items_product` uses ON DELETE RESTRICT — deletion will
- * fail if the product appears in any historical order_items.
- * @param {number} id
- * @returns {Promise<Object>} mysql2 OkPacket
+ * @param {string|number} id
+ * @returns {Promise<Object>} { affectedRows: 1 }
  */
 export const deleteById = async (id) => {
-  const [result] = await pool.query('DELETE FROM products WHERE id = ?', [id]);
-  return result;
+  await db.collection(COL).doc(String(id)).delete();
+  return { affectedRows: 1 };
 };

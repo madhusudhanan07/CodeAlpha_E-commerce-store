@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 import path from "path";
 
@@ -31,7 +32,6 @@ if (!getApps().length) {
       credential: cert(serviceAccount),
     });
   } else {
-    // Initialize default firebase app if no custom credentials supplied
     try {
       initializeApp();
     } catch (e) {
@@ -41,4 +41,6 @@ if (!getApps().length) {
 }
 
 export const adminAuth = getApps().length ? getAuth() : null;
-export default { adminAuth };
+export const db = getApps().length ? getFirestore() : null;
+
+export default { adminAuth, db };

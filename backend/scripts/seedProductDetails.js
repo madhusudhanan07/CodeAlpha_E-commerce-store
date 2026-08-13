@@ -1,14 +1,16 @@
 /**
  * seedProductDetails.js — Category-Matched Seeder for Product Details
  *
- * Populates 8-12 category-matched technical specifications and
- * 5 realistic customer reviews per product in MySQL.
+ * NOTE: This script has been superseded by seedFirestore.js which seeds
+ * all product details (specs, gallery, reviews) directly into Firestore
+ * as part of the initial product document.
+ *
+ * This file is kept for reference only and exits early when imported.
  */
 
-import pool from '../config/db.js';
-import * as ProductGalleryModel from '../models/ProductGallery.js';
-import * as ProductSpecificationModel from '../models/ProductSpecification.js';
-import * as ProductReviewModel from '../models/ProductReview.js';
+// Early exit — data is now seeded via seedFirestore.js
+export default {};
+
 
 const CATEGORY_SPECS = {
   1: [ // Electronics / Laptop / Phone

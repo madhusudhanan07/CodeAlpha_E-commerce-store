@@ -1,57 +1,64 @@
 /**
- * FrequentlyBought.js — Frequently Bought Together Model
+ * FrequentlyBought.js — Frequently Bought Together Model (Firestore)
  *
- * Interacts with the `frequently_bought` table in MySQL to suggest complementary accessories.
+ * Provides reusable query functions for the `frequently_bought` Firestore collection.
+ * Document ID = "{productId}_{accessoryId}" to enforce uniqueness.
+ * Preserves the exact same exported function signatures as the MySQL version.
  */
 
-import pool from '../config/db.js';
+import db from '../config/db.js';
 
-// Auto-ensure table exists
-const ensureTable = async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS frequently_bought (
-        id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-        product_id      BIGINT UNSIGNED NOT NULL,
-        accessory_id    BIGINT UNSIGNED NOT NULL,
-        bundle_discount INT             NOT NULL DEFAULT 10,
-        PRIMARY KEY (id),
-        UNIQUE KEY uq_bundle_pair (product_id, accessory_id),
-        CONSTRAINT fk_fb_product FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE,
-        CONSTRAINT fk_fb_accessory FOREIGN KEY (accessory_id) REFERENCES products (id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-  } catch (err) {
-    console.error('Error ensuring frequently_bought table:', err.message);
-  }
-};
-
-ensureTable();
+const COL = 'frequently_bought';
 
 /**
  * Fetch frequently bought accessories for a given product.
+ * @param {string|number} productId
+ * @returns {Promise<Array>}
  */
 export const findByProductId = async (productId) => {
-  const [rows] = await pool.query(
-    `SELECT fb.id, fb.bundle_discount, p.*, c.name AS category_name, c.slug AS category_slug
-     FROM frequently_bought fb
-     INNER JOIN products p ON p.id = fb.accessory_id
-     LEFT JOIN categories c ON c.id = p.category_id
-     WHERE fb.product_id = ?`,
-    [productId],
+  const snap = await db.collection(COL)
+    .where('product_id', '==', String(productId))
+    .get();
+
+  const results = await Promise.all(
+    snap.docs.map(async (doc) => {
+      const { accessory_id, bundle_discount } = doc.data();
+      const productDoc = await db.collection('products').doc(String(accessory_id)).get();
+      if (!productDoc.exists) return null;
+      const p = productDoc.data();
+      return {
+        id: doc.id,
+        bundle_discount,
+        ...p,
+        id: p.id ?? accessory_id,
+        category_name: p.category_name ?? null,
+        category_slug: p.category_slug ?? null,
+      };
+    }),
   );
-  return rows;
+
+  return results.filter(Boolean);
 };
 
 /**
- * Bulk insert frequently bought accessories pair.
+ * Bulk insert frequently bought accessories pairs.
+ * @param {Array<{ product_id, accessory_id, bundle_discount }>} pairs
+ * @returns {Promise<Object>} { affectedRows: pairs.length }
  */
 export const bulkCreate = async (pairs) => {
   if (!pairs || pairs.length === 0) return { affectedRows: 0 };
-  const values = pairs.map((pair) => [pair.product_id, pair.accessory_id, pair.bundle_discount ?? 10]);
-  const [result] = await pool.query(
-    'INSERT IGNORE INTO frequently_bought (product_id, accessory_id, bundle_discount) VALUES ?',
-    [values],
-  );
-  return result;
+  const batch = db.batch();
+
+  for (const pair of pairs) {
+    const docId = `${pair.product_id}_${pair.accessory_id}`;
+    const ref = db.collection(COL).doc(docId);
+    batch.set(ref, {
+      product_id: String(pair.product_id),
+      accessory_id: String(pair.accessory_id),
+      bundle_discount: pair.bundle_discount ?? 10,
+    }, { merge: true });
+  }
+
+  await batch.commit();
+  return { affectedRows: pairs.length };
 };

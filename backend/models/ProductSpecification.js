@@ -1,56 +1,48 @@
 /**
- * ProductSpecification.js — Product Specification Model
+ * ProductSpecification.js — Product Specification Model (Firestore)
  *
- * Interacts with the `product_specifications` table in MySQL.
+ * Specifications are stored as a `specifications[]` array embedded in each product document.
+ * This model provides a compatibility shim so productController works unchanged.
  */
 
-import pool from '../config/db.js';
+import db from '../config/db.js';
 
-// Ensure table exists at runtime
-const ensureTable = async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS product_specifications (
-        id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-        product_id BIGINT UNSIGNED NOT NULL,
-        spec_key   VARCHAR(150)    NOT NULL,
-        spec_value VARCHAR(255)    NOT NULL,
-        PRIMARY KEY (id),
-        INDEX idx_specs_product_id (product_id),
-        CONSTRAINT fk_specs_product FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-  } catch (err) {
-    console.error('Error ensuring product_specifications table:', err.message);
-  }
-};
-
-ensureTable();
+const COL = 'products';
 
 /**
  * Fetch all specifications for a given product ID.
- * @param {number} productId
- * @returns {Promise<Array>} Array of specification rows
+ * @param {string|number} productId
+ * @returns {Promise<Array>}
  */
 export const findByProductId = async (productId) => {
-  const [rows] = await pool.query(
-    'SELECT id, product_id, spec_key, spec_value FROM product_specifications WHERE product_id = ? ORDER BY id ASC',
-    [productId],
-  );
-  return rows;
+  const doc = await db.collection(COL).doc(String(productId)).get();
+  if (!doc.exists) return [];
+
+  const specs = doc.data().specifications ?? [];
+
+  // Return in the same shape as the MySQL version
+  return specs.map((spec, idx) => ({
+    id: idx + 1,
+    product_id: productId,
+    spec_key: spec.spec_key ?? spec.key ?? '',
+    spec_value: spec.spec_value ?? spec.value ?? '',
+  }));
 };
 
 /**
- * Bulk insert specifications for a product.
- * @param {number} productId
+ * Bulk insert specifications for a product (stored in product document).
+ * @param {string|number} productId
  * @param {Array<{ spec_key: string, spec_value: string }>} specs
+ * @returns {Promise<Object>} { affectedRows: specs.length }
  */
 export const bulkCreate = async (productId, specs) => {
   if (!specs || specs.length === 0) return { affectedRows: 0 };
-  const values = specs.map((item) => [productId, item.spec_key, item.spec_value]);
-  const [result] = await pool.query(
-    'INSERT INTO product_specifications (product_id, spec_key, spec_value) VALUES ?',
-    [values],
-  );
-  return result;
+
+  const formatted = specs.map((s) => ({
+    spec_key: s.spec_key ?? s.key ?? '',
+    spec_value: s.spec_value ?? s.value ?? '',
+  }));
+
+  await db.collection(COL).doc(String(productId)).update({ specifications: formatted });
+  return { affectedRows: specs.length };
 };

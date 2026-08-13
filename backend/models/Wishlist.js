@@ -1,121 +1,108 @@
 /**
- * Wishlist.js — Wishlist (Favorites) Model
+ * Wishlist.js — Wishlist (Favorites) Model (Firestore)
  *
- * Provides reusable query functions for the `wishlist` table.
- * Uses the existing MySQL connection pool from config/db.js.
+ * Provides reusable query functions for the `wishlist` Firestore collection.
+ * Document ID = "{userId}_{productId}" to enforce uniqueness.
+ * Preserves the exact same exported function signatures as the MySQL version.
  */
 
-import pool from '../config/db.js';
+import db from '../config/db.js';
 
-// Auto-ensure table exists at runtime
-const ensureTable = async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS wishlist (
-        id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-        user_id      BIGINT UNSIGNED NOT NULL,
-        product_id   BIGINT UNSIGNED NOT NULL,
-        created_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (id),
-        UNIQUE KEY uq_wishlist_user_product (user_id, product_id),
-        CONSTRAINT fk_wishlist_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        CONSTRAINT fk_wishlist_product FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-  } catch (err) {
-    console.error('Error ensuring wishlist table exists:', err.message);
-  }
-};
+const COL = 'wishlist';
 
-ensureTable();
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const wishDocId = (userId, productId) => `${userId}_${productId}`;
 
 // ── READ ──────────────────────────────────────────────────────────────────────
 
 /**
  * Fetch all wishlist items for a given user, joining full product details.
- * @param {number} userId
- * @returns {Promise<Array>} Array of product rows saved in wishlist
+ * @param {string} userId  — Firebase UID
+ * @returns {Promise<Array>}
  */
 export const findByUserId = async (userId) => {
-  const [rows] = await pool.query(
-    `SELECT
-       p.id,
-       p.category_id,
-       c.name  AS category_name,
-       c.slug  AS category_slug,
-       p.name,
-       p.slug,
-       p.description,
-       p.image_url,
-       p.price,
-       p.stock,
-       p.is_featured,
-       w.created_at AS saved_at
-     FROM wishlist w
-     INNER JOIN products p ON p.id = w.product_id
-     LEFT JOIN categories c ON c.id = p.category_id
-     WHERE w.user_id = ?
-     ORDER BY w.created_at DESC`,
-    [userId],
+  const snap = await db.collection(COL)
+    .where('user_id', '==', String(userId))
+    .get();
+
+  const results = await Promise.all(
+    snap.docs.map(async (doc) => {
+      const { product_id, created_at } = doc.data();
+      const productDoc = await db.collection('products').doc(String(product_id)).get();
+      if (!productDoc.exists) return null;
+
+      const p = productDoc.data();
+      return {
+        id: p.id ?? product_id,
+        category_id: p.category_id ?? null,
+        category_name: p.category_name ?? null,
+        category_slug: p.category_slug ?? null,
+        name: p.name,
+        slug: p.slug,
+        description: p.description ?? null,
+        image_url: p.image_url ?? null,
+        price: Number(p.price ?? 0),
+        stock: Number(p.stock ?? 0),
+        is_featured: p.is_featured ? 1 : 0,
+        saved_at: created_at,
+      };
+    }),
   );
-  return rows;
+
+  return results.filter(Boolean);
 };
 
 /**
  * Check whether a product exists in user's wishlist.
- * @param {number} userId
- * @param {number} productId
- * @returns {Promise<boolean>} True if in wishlist
+ * @param {string} userId
+ * @param {string|number} productId
+ * @returns {Promise<boolean>}
  */
 export const existsInWishlist = async (userId, productId) => {
-  const [rows] = await pool.query(
-    'SELECT 1 FROM wishlist WHERE user_id = ? AND product_id = ? LIMIT 1',
-    [userId, productId],
-  );
-  return rows.length > 0;
+  const doc = await db.collection(COL).doc(wishDocId(userId, productId)).get();
+  return doc.exists;
 };
 
 /**
  * Return count of saved wishlist items for a user.
- * @param {number} userId
- * @returns {Promise<number>} Item count
+ * @param {string} userId
+ * @returns {Promise<number>}
  */
 export const countByUserId = async (userId) => {
-  const [rows] = await pool.query(
-    'SELECT COUNT(*) AS total FROM wishlist WHERE user_id = ?',
-    [userId],
-  );
-  return Number(rows[0]?.total || 0);
+  const snap = await db.collection(COL).where('user_id', '==', String(userId)).get();
+  return snap.size;
 };
 
 // ── CREATE ────────────────────────────────────────────────────────────────────
 
 /**
- * Add a product to a user's wishlist (prevents duplicate via IGNORE).
- * @param {number} userId
- * @param {number} productId
- * @returns {Promise<Object>} mysql2 OkPacket
+ * Add a product to a user's wishlist (idempotent via set).
+ * @param {string} userId
+ * @param {string|number} productId
+ * @returns {Promise<Object>} { affectedRows: 1 }
  */
 export const add = async (userId, productId) => {
-  const [result] = await pool.query(
-    'INSERT IGNORE INTO wishlist (user_id, product_id) VALUES (?, ?)',
-    [userId, productId],
+  await db.collection(COL).doc(wishDocId(userId, productId)).set(
+    {
+      user_id: String(userId),
+      product_id: String(productId),
+      created_at: new Date().toISOString(),
+    },
+    { merge: true },
   );
-  return result;
+  return { affectedRows: 1 };
 };
 
 // ── DELETE ────────────────────────────────────────────────────────────────────
 
 /**
  * Remove a product from a user's wishlist.
- * @param {number} userId
- * @param {number} productId
- * @returns {Promise<Object>} mysql2 OkPacket
+ * @param {string} userId
+ * @param {string|number} productId
+ * @returns {Promise<Object>} { affectedRows: 1 }
  */
 export const remove = async (userId, productId) => {
-  const [result] = await pool.query(
-    'DELETE FROM wishlist WHERE user_id = ? AND product_id = ?',
-    [userId, productId],
-  );
-  return result;
+  await db.collection(COL).doc(wishDocId(userId, productId)).delete();
+  return { affectedRows: 1 };
 };

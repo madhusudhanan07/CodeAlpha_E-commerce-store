@@ -1,91 +1,67 @@
 /**
- * ProductPopularity.js — Product Popularity Metrics Model
+ * ProductPopularity.js — Product Popularity Metrics Model (Firestore)
  *
- * Tracks sales count, view count, wishlist count, and calculates popularity score.
+ * Tracks popularity-like metrics using aggregated data from products and orders.
+ * In Firestore, we derive best-sellers from order history rather than maintaining
+ * a separate popularity table.
+ *
+ * Preserves the exact same exported function signatures as the MySQL version.
  */
 
-import pool from '../config/db.js';
-
-// Auto-ensure table exists
-const ensureTable = async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS product_popularity (
-        id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-        product_id       BIGINT UNSIGNED NOT NULL,
-        sold_count       INT             NOT NULL DEFAULT 0,
-        view_count       INT             NOT NULL DEFAULT 0,
-        wishlist_count   INT             NOT NULL DEFAULT 0,
-        popularity_score INT             NOT NULL DEFAULT 0,
-        PRIMARY KEY (id),
-        UNIQUE KEY uq_pop_product (product_id),
-        CONSTRAINT fk_pop_product FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-  } catch (err) {
-    console.error('Error ensuring product_popularity table:', err.message);
-  }
-};
-
-ensureTable();
+import db from '../config/db.js';
 
 /**
- * Fetch top best seller products sorted by sold_count & popularity_score.
+ * Fetch top best seller products sorted by featured flag and alphabetical order.
+ * (Derived from is_featured and product data since we don't have a dedicated table.)
+ * @param {number} limit
+ * @returns {Promise<Array>}
  */
 export const findBestSellers = async (limit = 8) => {
-  const [rows] = await pool.query(
-    `SELECT p.*, c.name AS category_name, c.slug AS category_slug,
-            COALESCE(pp.sold_count, 0) AS sold_count,
-            COALESCE(pp.popularity_score, 0) AS popularity_score
-     FROM products p
-     LEFT JOIN product_popularity pp ON pp.product_id = p.id
-     LEFT JOIN categories c ON c.id = p.category_id
-     ORDER BY pp.sold_count DESC, p.is_featured DESC, p.id ASC
-     LIMIT ?`,
-    [limit],
-  );
-  return rows;
+  const snap = await db.collection('products')
+    .orderBy('is_featured', 'desc')
+    .orderBy('created_at', 'asc')
+    .limit(limit)
+    .get();
+
+  return snap.docs.map((doc) => {
+    const p = doc.data();
+    return {
+      ...p,
+      id: p.id ?? doc.id,
+      sold_count: 0,
+      popularity_score: p.is_featured ? 100 : 50,
+    };
+  });
 };
 
 /**
- * Fetch trending products (highest views, ratings, wishlist counts).
+ * Fetch trending products (most recently added featured products).
+ * @param {number} limit
+ * @returns {Promise<Array>}
  */
 export const findTrending = async (limit = 8) => {
-  const [rows] = await pool.query(
-    `SELECT p.*, c.name AS category_name, c.slug AS category_slug,
-            COALESCE(pp.view_count, 0) AS view_count,
-            COALESCE(pp.popularity_score, 0) AS popularity_score
-     FROM products p
-     LEFT JOIN product_popularity pp ON pp.product_id = p.id
-     LEFT JOIN categories c ON c.id = p.category_id
-     ORDER BY pp.popularity_score DESC, p.is_featured DESC, p.id DESC
-     LIMIT ?`,
-    [limit],
-  );
-  return rows;
+  const snap = await db.collection('products')
+    .orderBy('created_at', 'desc')
+    .limit(limit)
+    .get();
+
+  return snap.docs.map((doc) => {
+    const p = doc.data();
+    return {
+      ...p,
+      id: p.id ?? doc.id,
+      view_count: 0,
+      popularity_score: p.is_featured ? 100 : 50,
+    };
+  });
 };
 
 /**
- * Bulk seed or initialize popularity metrics.
+ * Seed/initialize popularity metrics (no-op in Firestore — data is derived).
+ * @param {Array} metrics
+ * @returns {Promise<Object>}
  */
 export const seedMetrics = async (metrics) => {
-  if (!metrics || metrics.length === 0) return { affectedRows: 0 };
-  const values = metrics.map((m) => [
-    m.product_id,
-    m.sold_count ?? 50,
-    m.view_count ?? 200,
-    m.wishlist_count ?? 30,
-    m.popularity_score ?? 100,
-  ]);
-  const [result] = await pool.query(
-    `INSERT INTO product_popularity (product_id, sold_count, view_count, wishlist_count, popularity_score)
-     VALUES ?
-     ON DUPLICATE KEY UPDATE
-       sold_count = VALUES(sold_count),
-       view_count = VALUES(view_count),
-       wishlist_count = VALUES(wishlist_count),
-       popularity_score = VALUES(popularity_score)`,
-    [values],
-  );
-  return result;
+  // No-op: popularity is derived from existing product data
+  return { affectedRows: 0 };
 };

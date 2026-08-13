@@ -8,21 +8,23 @@ import * as WishlistModel from '../models/Wishlist.js';
 import * as UserModel from '../models/User.js';
 import * as ProductModel from '../models/Product.js';
 
-// Helper to resolve or auto-provision MySQL user ID from Firebase token payload
+// Helper to resolve or auto-provision user in Firestore from Firebase token payload
+// Returns Firebase UID string (not a MySQL integer)
 const resolveUserId = async (decodedUser) => {
   if (!decodedUser || !decodedUser.uid) return null;
   let user = await UserModel.findByFirebaseUid(decodedUser.uid);
   if (!user) {
-    const email = decodedUser.email || `${decodedUser.uid}@firebase.user`;
-    const fullName = decodedUser.name || decodedUser.email?.split('@')[0] || 'Customer';
-    const result = await UserModel.create({
+    const email    = decodedUser.email || `${decodedUser.uid}@firebase.user`;
+    const fullName = decodedUser.name  || decodedUser.email?.split('@')[0] || 'Customer';
+    await UserModel.create({
       firebase_uid: decodedUser.uid,
       full_name: fullName,
-      email: email,
+      email,
     });
-    user = { id: result.insertId };
+    user = await UserModel.findByFirebaseUid(decodedUser.uid);
   }
-  return user.id;
+  // Return Firebase UID string — this is the user key in Firestore
+  return user?.firebase_uid || user?.id || null;
 };
 
 // ── GET /api/wishlist ────────────────────────────────────────────────────────

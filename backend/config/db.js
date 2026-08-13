@@ -1,45 +1,25 @@
 /**
- * db.js — MySQL Database Connection Configuration
- * Uses mysql2 with promise support for async/await compatibility.
- * Reads all credentials from environment variables via dotenv.
+ * db.js — Firestore Database Connection
+ *
+ * Replaces the previous MySQL connection pool.
+ * Re-exports the Firestore `db` instance from firebaseAdmin.js so that
+ * all models can continue to `import db from '../config/db.js'` without change.
+ *
+ * connectDB() is kept as a lightweight stub so server.js works unchanged.
  */
 
-import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-// ---------------------------------------------------------------------------
-// Connection pool — preferred over single connection for production workloads.
-// A pool reuses connections, handles reconnections, and limits concurrency.
-// ---------------------------------------------------------------------------
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT) || 3306,
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'codealpha_ecommerce',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 10000,
-});
+import { db } from './firebaseAdmin.js';
 
 /**
- * Verifies the pool can reach the database at startup.
- * Logs success or exits the process on failure.
+ * Verifies the Firestore instance is available at startup.
+ * Logs success or a warning if credentials are missing.
  */
 export const connectDB = async () => {
-  try {
-    const connection = await pool.getConnection();
-    console.log(`✅ MySQL connected — host: ${process.env.DB_HOST || 'localhost'}`);
-    connection.release();
-  } catch (error) {
-    console.error('❌ MySQL connection failed:', error.message);
-    console.warn('⚠️ Server is running, but database-dependent routes will fail. Please configure DB_HOST, DB_USER, DB_PASSWORD, and DB_NAME in your environment.');
-    // Removed process.exit(1) to prevent deployment crashes on PaaS like Render
+  if (db) {
+    console.log('✅ Firebase Firestore connected successfully.');
+  } else {
+    console.warn('⚠️ Firestore db instance is null — check Firebase credentials.');
   }
 };
 
-export default pool;
+export default db;

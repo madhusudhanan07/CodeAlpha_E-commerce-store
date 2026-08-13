@@ -1,7 +1,8 @@
 /**
- * cartController.js — Shopping Cart Business Logic
+ * cartController.js — Shopping Cart Business Logic (Firestore)
  *
- * Handles persistent cart operations using MySQL internal user IDs resolved from Firebase UIDs.
+ * Handles persistent cart operations using Firebase UIDs directly as user identifiers.
+ * No more MySQL integer ID resolution — Firebase UID is the user key throughout.
  * Enforces stock validation, quantity boundaries, and user isolation.
  */
 
@@ -9,26 +10,25 @@ import * as CartItemModel from '../models/CartItem.js';
 import * as UserModel from '../models/User.js';
 import * as ProductModel from '../models/Product.js';
 
-// Helper to resolve or auto-provision MySQL user ID from Firebase token payload
+// Helper: resolve or auto-provision user in Firestore from Firebase token payload
+// Returns Firebase UID string (not a MySQL integer)
 const resolveUserId = async (decodedUser) => {
   if (!decodedUser || !decodedUser.uid) return null;
+
   let user = await UserModel.findByFirebaseUid(decodedUser.uid);
   if (!user) {
-    const email = decodedUser.email || `${decodedUser.uid}@firebase.user`;
-    const fullName = decodedUser.name || decodedUser.email?.split('@')[0] || 'Customer';
-    const result = await UserModel.create({
+    const email    = decodedUser.email || `${decodedUser.uid}@firebase.user`;
+    const fullName = decodedUser.name  || decodedUser.email?.split('@')[0] || 'Customer';
+    await UserModel.create({
       firebase_uid: decodedUser.uid,
       full_name: fullName,
-      email: email,
+      email,
     });
-    // INSERT IGNORE returns insertId=0 when user already exists — re-fetch
-    if (result.insertId) {
-      user = { id: result.insertId };
-    } else {
-      user = await UserModel.findByFirebaseUid(decodedUser.uid);
-    }
+    user = await UserModel.findByFirebaseUid(decodedUser.uid);
   }
-  return user?.id || null;
+
+  // Return Firebase UID string — this is the user key in Firestore
+  return user?.firebase_uid || user?.id || null;
 };
 
 // ── GET /api/cart ────────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ export const addCartItem = async (req, res, next) => {
   try {
     const { product_id, quantity = 1 } = req.body;
     const numProductId = Number(product_id);
-    const numQty = Number(quantity);
+    const numQty       = Number(quantity);
 
     if (!numProductId || !Number.isInteger(numProductId)) {
       return res.status(400).json({ success: false, message: 'Valid product_id is required.' });
@@ -89,9 +89,9 @@ export const addCartItem = async (req, res, next) => {
     }
 
     // Check existing item quantity in user's cart
-    const existingItem = await CartItemModel.findByUserAndProduct(userId, numProductId);
-    const currentQty = existingItem ? existingItem.quantity : 0;
-    const newTotalQty = currentQty + numQty;
+    const existingItem  = await CartItemModel.findByUserAndProduct(userId, numProductId);
+    const currentQty    = existingItem ? existingItem.quantity : 0;
+    const newTotalQty   = currentQty + numQty;
 
     if (newTotalQty > product.stock) {
       return res.status(400).json({
@@ -105,7 +105,7 @@ export const addCartItem = async (req, res, next) => {
     // Fetch updated cart payload
     const items = await CartItemModel.findByUserId(userId);
     const count = await CartItemModel.countByUserId(userId);
-    const cart = items.map((item) => ({
+    const cart  = items.map((item) => ({
       ...item,
       subtotal: Number(item.product_price) * item.quantity,
     }));
@@ -125,7 +125,7 @@ export const addCartItem = async (req, res, next) => {
 export const updateCartItem = async (req, res, next) => {
   try {
     const productId = Number(req.params.id);
-    const numQty = Number(req.body.quantity);
+    const numQty    = Number(req.body.quantity);
 
     if (!productId || !Number.isInteger(productId)) {
       return res.status(400).json({ success: false, message: 'Valid product ID is required.' });
@@ -157,7 +157,7 @@ export const updateCartItem = async (req, res, next) => {
 
     const items = await CartItemModel.findByUserId(userId);
     const count = await CartItemModel.countByUserId(userId);
-    const cart = items.map((item) => ({
+    const cart  = items.map((item) => ({
       ...item,
       subtotal: Number(item.product_price) * item.quantity,
     }));
@@ -197,7 +197,7 @@ export const clearCart = async (req, res, next) => {
 export const removeCartItem = async (req, res, next) => {
   try {
     const productId = Number(req.params.id);
-    const userId = await resolveUserId(req.decodedUser);
+    const userId    = await resolveUserId(req.decodedUser);
     if (!userId) {
       return res.status(404).json({ success: false, message: 'User account not found.' });
     }
@@ -206,7 +206,7 @@ export const removeCartItem = async (req, res, next) => {
 
     const items = await CartItemModel.findByUserId(userId);
     const count = await CartItemModel.countByUserId(userId);
-    const cart = items.map((item) => ({
+    const cart  = items.map((item) => ({
       ...item,
       subtotal: Number(item.product_price) * item.quantity,
     }));

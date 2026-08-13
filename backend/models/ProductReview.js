@@ -1,211 +1,249 @@
 /**
- * ProductReview.js — Product Review Model
+ * ProductReview.js — Product Review Model (Firestore)
  *
- * Interacts with the `product_reviews` table in MySQL.
+ * Provides reusable query functions for the `product_reviews` Firestore collection.
+ * Document ID = "{productId}_{userId}" to enforce one review per user per product.
+ * Preserves the exact same exported function signatures as the MySQL version.
  */
 
-import pool from '../config/db.js';
+import db from '../config/db.js';
 
-// Ensure table schema matches specs at runtime
-const ensureTable = async () => {
-  try {
-    // Check if column 'review' exists in product_reviews
-    const [cols] = await pool.query(`SHOW COLUMNS FROM product_reviews LIKE 'review'`);
-    if (cols.length === 0) {
-      // Re-create table if 'review' column is missing in old schema
-      await pool.query('SET FOREIGN_KEY_CHECKS = 0');
-      await pool.query('DROP TABLE IF EXISTS product_reviews');
-      await pool.query('SET FOREIGN_KEY_CHECKS = 1');
-    }
+const COL = 'product_reviews';
 
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS product_reviews (
-        id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-        product_id        BIGINT UNSIGNED NOT NULL,
-        user_id           BIGINT UNSIGNED NOT NULL,
-        rating            INT             NOT NULL DEFAULT 5,
-        title             VARCHAR(255)    NOT NULL,
-        review            TEXT            NOT NULL,
-        verified_purchase TINYINT(1)      NOT NULL DEFAULT 1,
-        created_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        PRIMARY KEY (id),
-        UNIQUE KEY uq_reviews_product_user (product_id, user_id),
-        INDEX idx_reviews_product_id (product_id),
-        INDEX idx_reviews_user_id (user_id),
-        CONSTRAINT fk_reviews_product FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE,
-        CONSTRAINT fk_reviews_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-  } catch (err) {
-    console.error('Error ensuring product_reviews table:', err.message);
-  }
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const reviewDocId = (productId, userId) => `${productId}_${userId}`;
+
+const docToRow = (doc) => {
+  const data = doc.data();
+  const userName = data.user_name ?? 'Customer';
+  return {
+    id: doc.id,
+    product_id: data.product_id,
+    user_id: data.user_id,
+    rating: Number(data.rating ?? 5),
+    title: data.title ?? '',
+    review: data.review ?? '',
+    verified_purchase: data.verified_purchase !== false ? 1 : 0,
+    created_at: data.created_at ?? null,
+    updated_at: data.updated_at ?? null,
+    user_name: userName,
+    user_email: data.user_email ?? null,
+    firebase_uid: data.user_id ?? null,
+    user_avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=6c63ff&color=fff`,
+    status: data.status ?? 'Approved',
+    is_hidden: data.is_hidden ?? false,
+  };
 };
 
-//ensureTable();
+// ── READ ──────────────────────────────────────────────────────────────────────
 
 /**
- * Fetch all reviews for a product with user details joined.
- * @param {number} productId
+ * Fetch all reviews for a product. Client-side sort avoids composite index.
+ * @param {string|number} productId
  * @returns {Promise<Array>}
  */
 export const findByProductId = async (productId) => {
-  const [rows] = await pool.query(
-    `SELECT 
-        pr.id,
-        pr.product_id,
-        pr.user_id,
-        pr.rating,
-        pr.title,
-        pr.review,
-        pr.verified_purchase,
-        pr.created_at,
-        pr.updated_at,
-        u.full_name AS user_name,
-        u.email AS user_email,
-        u.firebase_uid
-     FROM product_reviews pr
-     INNER JOIN users u ON u.id = pr.user_id
-     WHERE pr.product_id = ?
-     ORDER BY pr.created_at DESC`,
-    [productId],
-  );
-
-  return rows.map((r) => ({
-    ...r,
-    user_avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(r.user_name || 'Customer')}&background=6c63ff&color=fff`,
-  }));
+  const snap = await db.collection(COL)
+    .where('product_id', '==', String(productId))
+    .get();
+  return snap.docs.map(docToRow).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 };
 
 /**
- * Get single review by review ID.
- * @param {number} reviewId
+ * Get single review by document ID.
+ * @param {string} reviewId
  * @returns {Promise<Object|null>}
  */
 export const findById = async (reviewId) => {
-  const [rows] = await pool.query(
-    `SELECT pr.*, u.full_name AS user_name, u.email AS user_email, u.firebase_uid
-     FROM product_reviews pr
-     INNER JOIN users u ON u.id = pr.user_id
-     WHERE pr.id = ? LIMIT 1`,
-    [reviewId],
-  );
-  if (rows.length === 0) return null;
-  const r = rows[0];
-  return {
-    ...r,
-    user_avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(r.user_name || 'Customer')}&background=6c63ff&color=fff`,
-  };
-};
-
-/**
- * Get average rating, total count, and rating distribution for a product.
- * @param {number} productId
- * @returns {Promise<{ average_rating: number, review_count: number, rating_distribution: Object }>}
- */
-export const getRatingSummary = async (productId) => {
-  const [rows] = await pool.query(
-    `SELECT 
-        AVG(rating) AS avg_rating,
-        COUNT(*) AS total_reviews,
-        SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) AS count_5,
-        SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) AS count_4,
-        SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) AS count_3,
-        SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) AS count_2,
-        SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) AS count_1
-     FROM product_reviews
-     WHERE product_id = ?`,
-    [productId],
-  );
-
-  const row = rows[0] || {};
-  const avg = Number(row.avg_rating || 5.0);
-  const total = Number(row.total_reviews || 0);
-
-  return {
-    average_rating: Number(avg.toFixed(1)),
-    review_count: total,
-    rating_distribution: {
-      5: Number(row.count_5 || 0),
-      4: Number(row.count_4 || 0),
-      3: Number(row.count_3 || 0),
-      2: Number(row.count_2 || 0),
-      1: Number(row.count_1 || 0),
-    },
-  };
-};
-
-/**
- * Check if a user has purchased a product.
- * @param {number} userId
- * @param {number} productId
- * @returns {Promise<boolean>}
- */
-export const hasUserPurchased = async (userId, productId) => {
-  const [rows] = await pool.query(
-    `SELECT oi.id 
-     FROM order_items oi
-     INNER JOIN orders o ON o.id = oi.order_id
-     WHERE o.user_id = ? AND oi.product_id = ?
-     LIMIT 1`,
-    [userId, productId],
-  );
-  return rows.length > 0;
+  const doc = await db.collection(COL).doc(String(reviewId)).get();
+  return doc.exists ? docToRow(doc) : null;
 };
 
 /**
  * Check if user already reviewed a product.
- * @param {number} userId
- * @param {number} productId
+ * @param {string} userId
+ * @param {string|number} productId
  * @returns {Promise<Object|null>}
  */
 export const findByUserAndProduct = async (userId, productId) => {
-  const [rows] = await pool.query(
-    'SELECT * FROM product_reviews WHERE user_id = ? AND product_id = ? LIMIT 1',
-    [userId, productId],
-  );
-  return rows[0] ?? null;
+  const doc = await db.collection(COL).doc(reviewDocId(productId, userId)).get();
+  return doc.exists ? docToRow(doc) : null;
 };
+
+/**
+ * Get average rating, total count, and rating distribution for a product.
+ * @param {string|number} productId
+ * @returns {Promise<{ average_rating, review_count, rating_distribution }>}
+ */
+export const getRatingSummary = async (productId) => {
+  const snap = await db.collection(COL)
+    .where('product_id', '==', String(productId))
+    .get();
+
+  if (snap.empty) {
+    return {
+      average_rating: 5.0,
+      review_count: 0,
+      rating_distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+    };
+  }
+
+  const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  let total = 0;
+
+  snap.docs.forEach((doc) => {
+    const r = Number(doc.data().rating ?? 5);
+    total += r;
+    if (distribution[r] !== undefined) distribution[r]++;
+  });
+
+  const avg = total / snap.size;
+
+  return {
+    average_rating: Number(avg.toFixed(1)),
+    review_count: snap.size,
+    rating_distribution: distribution,
+  };
+};
+
+/**
+ * Check if a user has purchased a product (by checking orders).
+ * @param {string} userId
+ * @param {string|number} productId
+ * @returns {Promise<boolean>}
+ */
+export const hasUserPurchased = async (userId, productId) => {
+  const snap = await db.collection('orders')
+    .where('user_id', '==', String(userId))
+    .get();
+
+  for (const doc of snap.docs) {
+    const items = doc.data().items ?? [];
+    if (items.some((item) => String(item.product_id) === String(productId))) {
+      return true;
+    }
+  }
+  return false;
+};
+
+// ── CREATE ────────────────────────────────────────────────────────────────────
 
 /**
  * Create a new review.
- * @param {{ product_id: number, user_id: number, rating: number, title: string, review: string, verified_purchase?: boolean }} data
+ * @param {{ product_id, user_id, rating, title, review, verified_purchase }} data
+ * @returns {Promise<Object>} { insertId }
  */
-export const create = async ({ product_id, user_id, rating, title, review, verified_purchase = true }) => {
-  const [result] = await pool.query(
-    `INSERT INTO product_reviews (product_id, user_id, rating, title, review, verified_purchase)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [product_id, user_id, rating, title, review, verified_purchase ? 1 : 0],
-  );
-  return result;
+export const create = async ({
+  product_id,
+  user_id,
+  rating,
+  title,
+  review,
+  verified_purchase = true,
+}) => {
+  // Fetch user name and email
+  let user_name = 'Verified Customer';
+  let user_email = null;
+  const userDoc = await db.collection('users').doc(String(user_id)).get();
+  if (userDoc.exists) {
+    user_name = userDoc.data().full_name ?? user_name;
+    user_email = userDoc.data().email ?? null;
+  }
+
+  const docId = reviewDocId(product_id, user_id);
+  const now = new Date().toISOString();
+
+  await db.collection(COL).doc(docId).set({
+    product_id: String(product_id),
+    user_id: String(user_id),
+    rating: Number(rating),
+    title,
+    review,
+    verified_purchase: Boolean(verified_purchase),
+    user_name,
+    user_email,
+    status: 'Approved',
+    is_hidden: false,
+    report_count: 0,
+    created_at: now,
+    updated_at: now,
+  });
+
+  return { insertId: docId };
 };
+
+/**
+ * Bulk create reviews (compatibility with existing seed/controller calls).
+ * @param {string|number} productId
+ * @param {Array} reviews
+ * @returns {Promise<Object>}
+ */
+export const bulkCreate = async (productId, reviews) => {
+  const batch = db.batch();
+  const now = new Date().toISOString();
+
+  for (const rev of reviews) {
+    // Use a unique doc ID for seeded reviews
+    const docId = `${productId}_${rev.user_name?.replace(/\s/g, '_') ?? Date.now()}`;
+    const docRef = db.collection(COL).doc(docId);
+    batch.set(docRef, {
+      product_id: String(productId),
+      user_id: rev.user_id ? String(rev.user_id) : 'seed',
+      rating: Number(rev.rating ?? 5),
+      title: rev.title ?? 'Great Product',
+      review: rev.review ?? rev.comment ?? '',
+      verified_purchase: rev.verified_purchase !== false,
+      user_name: rev.user_name ?? 'Verified Customer',
+      user_email: rev.user_email ?? null,
+      status: 'Approved',
+      is_hidden: false,
+      report_count: 0,
+      created_at: rev.created_at ?? now,
+      updated_at: now,
+    }, { merge: true });
+  }
+
+  await batch.commit();
+  return { affectedRows: reviews.length };
+};
+
+// ── UPDATE ────────────────────────────────────────────────────────────────────
 
 /**
  * Update an existing review by ID and user_id.
- * @param {number} reviewId
- * @param {number} userId
- * @param {{ rating: number, title: string, review: string }} fields
+ * @param {string} reviewId
+ * @param {string} userId
+ * @param {{ rating, title, review }} fields
+ * @returns {Promise<Object>} { affectedRows: 1 }
  */
 export const updateById = async (reviewId, userId, { rating, title, review }) => {
-  const [result] = await pool.query(
-    `UPDATE product_reviews
-     SET rating = ?, title = ?, review = ?
-     WHERE id = ? AND user_id = ?`,
-    [rating, title, review, reviewId, userId],
-  );
-  return result;
+  const doc = await db.collection(COL).doc(String(reviewId)).get();
+  if (!doc.exists || doc.data().user_id !== String(userId)) {
+    return { affectedRows: 0 };
+  }
+  await db.collection(COL).doc(String(reviewId)).update({
+    rating: Number(rating),
+    title,
+    review,
+    updated_at: new Date().toISOString(),
+  });
+  return { affectedRows: 1 };
 };
+
+// ── DELETE ────────────────────────────────────────────────────────────────────
 
 /**
  * Delete a review by ID and user_id.
- * @param {number} reviewId
- * @param {number} userId
+ * @param {string} reviewId
+ * @param {string} userId
+ * @returns {Promise<Object>} { affectedRows: 1 }
  */
 export const deleteById = async (reviewId, userId) => {
-  const [result] = await pool.query(
-    'DELETE FROM product_reviews WHERE id = ? AND user_id = ?',
-    [reviewId, userId],
-  );
-  return result;
+  const doc = await db.collection(COL).doc(String(reviewId)).get();
+  if (!doc.exists || doc.data().user_id !== String(userId)) {
+    return { affectedRows: 0 };
+  }
+  await db.collection(COL).doc(String(reviewId)).delete();
+  return { affectedRows: 1 };
 };
-

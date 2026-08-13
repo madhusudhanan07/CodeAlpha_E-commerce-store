@@ -1,134 +1,92 @@
 /**
- * Order.js — Order Model
+ * Order.js — Order Model (Firestore)
  *
- * Provides reusable, parameterised query functions for the `orders` table.
- * Uses the existing MySQL connection pool from config/db.js.
+ * Provides reusable query functions for the `orders` Firestore collection.
+ * Order items are stored as a nested `items[]` array inside each order document
+ * (instead of a separate order_items collection) — this is idiomatic Firestore
+ * and eliminates the need for JOIN queries.
  *
- * Responsibilities:
- *  - Create orders and query order history
- *  - Update order and payment status
- *  - No business logic, no HTTP handling, no routing
- *
- * Schema notes:
- *  - shipping_address is stored as JSON in MySQL 8 (native JSON column).
- *  - order_status and payment_status are ENUM columns.
- *  - ON DELETE RESTRICT on users.id — order history is preserved.
- *  - payment_method column may not exist in older DB schemas; all queries
- *    fall back gracefully if the column is missing (ER_BAD_FIELD_ERROR).
+ * Preserves the exact same exported function signatures as the MySQL version.
  */
 
-import pool from '../config/db.js';
+import db from '../config/db.js';
 
-// ── Valid ENUM values (mirrors the SQL schema) ────────────────────────────────
+const COL = 'orders';
+
 export const ORDER_STATUS   = Object.freeze(['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled']);
 export const PAYMENT_STATUS = Object.freeze(['Pending', 'Paid', 'Failed']);
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const docToRow = (doc) => {
+  const data = doc.data();
+  return {
+    id: doc.id,
+    user_id: data.user_id,
+    total_amount: Number(data.total_amount ?? 0),
+    order_status: data.order_status ?? 'Pending',
+    payment_status: data.payment_status ?? 'Pending',
+    payment_method: data.payment_method ?? 'Cash on Delivery',
+    shipping_address: data.shipping_address ?? null,
+    items: data.items ?? [],
+    created_at: data.created_at ?? null,
+  };
+};
 
 // ── READ ──────────────────────────────────────────────────────────────────────
 
 /**
  * Fetch all orders for a given user, newest first.
- * @param {number} userId
- * @returns {Promise<Array>} Array of order rows
+ * Client-side sort to avoid composite index.
+ * @param {string} userId  — Firebase UID
+ * @returns {Promise<Array>}
  */
 export const findByUserId = async (userId) => {
-  try {
-    const [rows] = await pool.query(
-      `SELECT id, user_id, total_amount, order_status, payment_status,
-              payment_method, shipping_address, created_at
-       FROM orders
-       WHERE user_id = ?
-       ORDER BY created_at DESC`,
-      [userId],
-    );
-    return rows;
-  } catch (err) {
-    if (err.code === 'ER_BAD_FIELD_ERROR') {
-      const [rows] = await pool.query(
-        `SELECT id, user_id, total_amount, order_status, payment_status,
-                shipping_address, created_at
-         FROM orders
-         WHERE user_id = ?
-         ORDER BY created_at DESC`,
-        [userId],
-      );
-      return rows;
-    }
-    throw err;
-  }
+  const snap = await db.collection(COL)
+    .where('user_id', '==', String(userId))
+    .get();
+  return snap.docs.map(docToRow).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 };
 
 /**
- * Find a single order by its ID.
- * @param {number} id
- * @returns {Promise<Object|null>} Order row or null
+ * Find a single order by its Firestore document ID.
+ * @param {string} id
+ * @returns {Promise<Object|null>}
  */
 export const findById = async (id) => {
-  try {
-    const [rows] = await pool.query(
-      `SELECT id, user_id, total_amount, order_status, payment_status,
-              payment_method, shipping_address, created_at
-       FROM orders WHERE id = ? LIMIT 1`,
-      [id],
-    );
-    return rows[0] ?? null;
-  } catch (err) {
-    if (err.code === 'ER_BAD_FIELD_ERROR') {
-      const [rows] = await pool.query(
-        `SELECT id, user_id, total_amount, order_status, payment_status,
-                shipping_address, created_at
-         FROM orders WHERE id = ? LIMIT 1`,
-        [id],
-      );
-      return rows[0] ?? null;
-    }
-    throw err;
-  }
+  const doc = await db.collection(COL).doc(String(id)).get();
+  return doc.exists ? docToRow(doc) : null;
 };
 
 /**
  * Find a single order by ID, verifying it belongs to the given user.
- * Prevents order-ID enumeration attacks at the model level.
- * @param {number} id
- * @param {number} userId
- * @returns {Promise<Object|null>} Order row or null
+ * @param {string} id
+ * @param {string} userId  — Firebase UID
+ * @returns {Promise<Object|null>}
  */
 export const findByIdAndUser = async (id, userId) => {
-  try {
-    const [rows] = await pool.query(
-      `SELECT id, user_id, total_amount, order_status, payment_status,
-              payment_method, shipping_address, created_at
-       FROM orders WHERE id = ? AND user_id = ? LIMIT 1`,
-      [id, userId],
-    );
-    return rows[0] ?? null;
-  } catch (err) {
-    if (err.code === 'ER_BAD_FIELD_ERROR') {
-      const [rows] = await pool.query(
-        `SELECT id, user_id, total_amount, order_status, payment_status,
-                shipping_address, created_at
-         FROM orders WHERE id = ? AND user_id = ? LIMIT 1`,
-        [id, userId],
-      );
-      return rows[0] ?? null;
-    }
-    throw err;
-  }
+  const doc = await db.collection(COL).doc(String(id)).get();
+  if (!doc.exists) return null;
+  const data = doc.data();
+  if (data.user_id !== String(userId)) return null;
+  return docToRow(doc);
+};
+
+/**
+ * Fetch all orders (admin use). Sorted client-side.
+ * @returns {Promise<Array>}
+ */
+export const findAllOrders = async () => {
+  const snap = await db.collection(COL).get();
+  return snap.docs.map(docToRow).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 };
 
 // ── CREATE ────────────────────────────────────────────────────────────────────
 
 /**
  * Insert a new order record.
- * Falls back to omitting payment_method if the column doesn't exist yet.
- * @param {{
- *   user_id:          number,
- *   total_amount:     number,
- *   order_status?:    string,
- *   payment_status?:  string,
- *   payment_method?:  string,
- *   shipping_address?: object
- * }} data
- * @returns {Promise<Object>} mysql2 OkPacket (insertId = new order ID)
+ * @param {{ user_id, total_amount, order_status, payment_status, payment_method, shipping_address, items }} data
+ * @returns {Promise<Object>} { insertId: newDocId }
  */
 export const create = async ({
   user_id,
@@ -137,55 +95,42 @@ export const create = async ({
   payment_status   = 'Pending',
   payment_method   = 'Cash on Delivery',
   shipping_address = null,
+  items            = [],
 }) => {
-  const addressJson = shipping_address ? JSON.stringify(shipping_address) : null;
-  try {
-    const [result] = await pool.query(
-      `INSERT INTO orders (user_id, total_amount, order_status, payment_status, payment_method, shipping_address)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [user_id, total_amount, order_status, payment_status, payment_method, addressJson],
-    );
-    return result;
-  } catch (err) {
-    // Fallback: insert without payment_method if column doesn't exist yet in production DB
-    if (err.code === 'ER_BAD_FIELD_ERROR') {
-      const [result] = await pool.query(
-        `INSERT INTO orders (user_id, total_amount, order_status, payment_status, shipping_address)
-         VALUES (?, ?, ?, ?, ?)`,
-        [user_id, total_amount, order_status, payment_status, addressJson],
-      );
-      return result;
-    }
-    throw err;
-  }
+  const docRef = db.collection(COL).doc(); // auto-generate ID
+  await docRef.set({
+    user_id: String(user_id),
+    total_amount: Number(total_amount),
+    order_status,
+    payment_status,
+    payment_method,
+    shipping_address: shipping_address ?? null,
+    items,
+    created_at: new Date().toISOString(),
+  });
+  return { insertId: docRef.id };
 };
 
 // ── UPDATE ────────────────────────────────────────────────────────────────────
 
 /**
  * Update the order_status for a given order.
- * @param {number} id
- * @param {string} status - Must be one of ORDER_STATUS values
- * @returns {Promise<Object>} mysql2 OkPacket
+ * @param {string} id
+ * @param {string} status
+ * @returns {Promise<Object>} { affectedRows: 1 }
  */
 export const updateOrderStatus = async (id, status) => {
-  const [result] = await pool.query(
-    'UPDATE orders SET order_status = ? WHERE id = ?',
-    [status, id],
-  );
-  return result;
+  await db.collection(COL).doc(String(id)).update({ order_status: status });
+  return { affectedRows: 1 };
 };
 
 /**
  * Update the payment_status for a given order.
- * @param {number} id
- * @param {string} status - Must be one of PAYMENT_STATUS values
- * @returns {Promise<Object>} mysql2 OkPacket
+ * @param {string} id
+ * @param {string} status
+ * @returns {Promise<Object>} { affectedRows: 1 }
  */
 export const updatePaymentStatus = async (id, status) => {
-  const [result] = await pool.query(
-    'UPDATE orders SET payment_status = ? WHERE id = ?',
-    [status, id],
-  );
-  return result;
+  await db.collection(COL).doc(String(id)).update({ payment_status: status });
+  return { affectedRows: 1 };
 };

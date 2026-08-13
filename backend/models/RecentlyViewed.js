@@ -1,85 +1,72 @@
 /**
- * RecentlyViewed.js — Recently Viewed Products Model
+ * RecentlyViewed.js — Recently Viewed Products Model (Firestore)
  *
- * Stores and retrieves recently viewed product history for both logged-in users and guest sessions.
+ * Provides reusable query functions for the `recently_viewed` Firestore collection.
+ * Document ID = "{userId}_{productId}" or "{sessionId}_{productId}".
+ * Preserves the exact same exported function signatures as the MySQL version.
  */
 
-import pool from '../config/db.js';
+import db from '../config/db.js';
 
-// Auto-ensure table exists
-const ensureTable = async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS recently_viewed (
-        id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-        user_id    BIGINT UNSIGNED     NULL,
-        session_id VARCHAR(128)        NULL,
-        product_id BIGINT UNSIGNED NOT NULL,
-        viewed_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        PRIMARY KEY (id),
-        UNIQUE KEY uq_user_product (user_id, product_id),
-        UNIQUE KEY uq_session_product (session_id, product_id),
-        INDEX idx_recently_user (user_id),
-        INDEX idx_recently_session (session_id),
-        CONSTRAINT fk_recently_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        CONSTRAINT fk_recently_product FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-  } catch (err) {
-    console.error('Error ensuring recently_viewed table:', err.message);
-  }
-};
-
-ensureTable();
+const COL = 'recently_viewed';
 
 /**
  * Record a product view for a logged-in user or guest session.
+ * @param {{ userId?, sessionId?, productId }} params
  */
 export const recordView = async ({ userId = null, sessionId = null, productId }) => {
-  if (userId) {
-    await pool.query(
-      `INSERT INTO recently_viewed (user_id, product_id, viewed_at)
-       VALUES (?, ?, NOW())
-       ON DUPLICATE KEY UPDATE viewed_at = NOW()`,
-      [userId, productId],
-    );
-  } else if (sessionId) {
-    await pool.query(
-      `INSERT INTO recently_viewed (session_id, product_id, viewed_at)
-       VALUES (?, ?, NOW())
-       ON DUPLICATE KEY UPDATE viewed_at = NOW()`,
-      [sessionId, productId],
-    );
-  }
+  const key = userId ? `user_${userId}_${productId}` : `session_${sessionId}_${productId}`;
+  await db.collection(COL).doc(key).set(
+    {
+      user_id: userId ? String(userId) : null,
+      session_id: sessionId ?? null,
+      product_id: String(productId),
+      viewed_at: new Date().toISOString(),
+    },
+    { merge: true },
+  );
 };
 
 /**
  * Get up to 10 recently viewed products for a user or session.
+ * @param {{ userId?, sessionId?, limit? }} params
+ * @returns {Promise<Array>}
  */
 export const findRecent = async ({ userId = null, sessionId = null, limit = 10 }) => {
-  let rows = [];
+  let snap;
+
   if (userId) {
-    [rows] = await pool.query(
-      `SELECT p.*, c.name AS category_name, c.slug AS category_slug, rv.viewed_at
-       FROM recently_viewed rv
-       INNER JOIN products p ON p.id = rv.product_id
-       LEFT JOIN categories c ON c.id = p.category_id
-       WHERE rv.user_id = ?
-       ORDER BY rv.viewed_at DESC
-       LIMIT ?`,
-      [userId, limit],
-    );
+    snap = await db.collection(COL)
+      .where('user_id', '==', String(userId))
+      .get();
   } else if (sessionId) {
-    [rows] = await pool.query(
-      `SELECT p.*, c.name AS category_name, c.slug AS category_slug, rv.viewed_at
-       FROM recently_viewed rv
-       INNER JOIN products p ON p.id = rv.product_id
-       LEFT JOIN categories c ON c.id = p.category_id
-       WHERE rv.session_id = ?
-       ORDER BY rv.viewed_at DESC
-       LIMIT ?`,
-      [sessionId, limit],
-    );
+    snap = await db.collection(COL)
+      .where('session_id', '==', String(sessionId))
+      .get();
+  } else {
+    return [];
   }
-  return rows;
+
+  // Sort by viewed_at client-side and limit
+  const sortedDocs = snap.docs
+    .sort((a, b) => new Date(b.data().viewed_at) - new Date(a.data().viewed_at))
+    .slice(0, limit);
+
+  const results = await Promise.all(
+    sortedDocs.map(async (doc) => {
+      const { product_id, viewed_at } = doc.data();
+      const productDoc = await db.collection('products').doc(String(product_id)).get();
+      if (!productDoc.exists) return null;
+      const p = productDoc.data();
+      return {
+        ...p,
+        id: p.id ?? product_id,
+        category_name: p.category_name ?? null,
+        category_slug: p.category_slug ?? null,
+        viewed_at,
+      };
+    }),
+  );
+
+  return results.filter(Boolean);
 };

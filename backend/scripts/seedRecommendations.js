@@ -1,23 +1,31 @@
 /**
- * seedRecommendations.js — Automated Recommendation Engine Seeder
+ * seedRecommendations.js — Recommendation Engine Seeder (Firestore)
  *
- * Populates frequently_bought accessory bundles and product_popularity metrics in MySQL.
+ * Populates frequently_bought accessory bundles in Firestore.
+ * Product popularity is derived dynamically from Firestore data,
+ * so no separate metrics table needs seeding.
  */
 
-import pool from '../config/db.js';
+import db from '../config/db.js';
 import * as FrequentlyBoughtModel from '../models/FrequentlyBought.js';
 import * as ProductPopularityModel from '../models/ProductPopularity.js';
 
 export const seedRecommendations = async () => {
   try {
-    const [products] = await pool.query('SELECT id, name, category_id FROM products');
-    if (!products || products.length === 0) return;
+    const snap = await db.collection('products').get();
+    if (snap.empty) return;
+
+    const products = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    // Check if frequently_bought data already exists
+    const fbSnap = await db.collection('frequently_bought').limit(1).get();
+    if (!fbSnap.empty) return; // Already seeded
 
     // 1. Seed Frequently Bought Pairs
     const bundlePairs = [];
     for (const product of products) {
-      // Find 2-3 potential accessories from same or complementary category
-      const accessories = products.filter((p) => p.id !== product.id).slice(0, 3);
+      // Find 2 accessories from same category or adjacent products
+      const accessories = products.filter((p) => p.id !== product.id).slice(0, 2);
       for (const acc of accessories) {
         bundlePairs.push({
           product_id: product.id,
@@ -26,26 +34,17 @@ export const seedRecommendations = async () => {
         });
       }
     }
+
     if (bundlePairs.length > 0) {
-      await FrequentlyBoughtModel.bulkCreate(bundlePairs);
+      // Batch in groups of 500 (Firestore batch limit)
+      const chunkSize = 400;
+      for (let i = 0; i < bundlePairs.length; i += chunkSize) {
+        await FrequentlyBoughtModel.bulkCreate(bundlePairs.slice(i, i + chunkSize));
+      }
     }
 
-    // 2. Seed Product Popularity Metrics
-    const metrics = products.map((p, idx) => {
-      const soldCount = Math.floor(Math.random() * 300) + 50;
-      const viewCount = Math.floor(Math.random() * 2000) + 500;
-      const wishlistCount = Math.floor(Math.random() * 150) + 20;
-      const popularityScore = soldCount * 3 + wishlistCount * 2 + Math.floor(viewCount / 10);
-      return {
-        product_id: p.id,
-        sold_count: soldCount,
-        view_count: viewCount,
-        wishlist_count: wishlistCount,
-        popularity_score: popularityScore,
-      };
-    });
-
-    await ProductPopularityModel.seedMetrics(metrics);
+    // 2. Product popularity is dynamic — no seeding needed in Firestore
+    await ProductPopularityModel.seedMetrics([]);
   } catch (err) {
     console.error('Error seeding recommendations:', err.message);
   }
